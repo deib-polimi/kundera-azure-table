@@ -28,7 +28,7 @@
         <exclude-unlisted-classes>true</exclude-unlisted-classes>
         <properties>
             <property name="kundera.keyspace" value="azure-test"/>
-            <property name="kundera.client.lookup.class" value="it.polimi.client.datastore.AzureTableClientFactory"/>
+            <property name="kundera.client.lookup.class" value="it.polimi.client.azuretable.AzureTableClientFactory"/>
         </properties>
     </persistence-unit>
 </persistence>

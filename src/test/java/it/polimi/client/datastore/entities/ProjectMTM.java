@@ -14,7 +14,7 @@ import java.util.List;
 @EqualsAndHashCode(exclude = "employees")
 @NoArgsConstructor
 @Entity
-@Table(name = "ProjectMTM", schema = "gae-test@pu")
+@Table(name = "ProjectMTM", schema = "azure-test@pu")
 public class ProjectMTM {
 
     @Id
