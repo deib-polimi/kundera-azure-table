@@ -17,20 +17,15 @@ import java.util.Iterator;
 import java.util.List;
 
 /**
+ * Used by Kundera to run JPA queries by invoking appropriate methods in Entity Readers.
+ *
  * @author Fabio Arcidiacono.
- *         <p>Used by Kundera to run JPA queries by invoking appropriate methods in Entity Readers.</p>
+ * @see com.impetus.kundera.query.QueryImpl
  */
 public class AzureTableQuery extends QueryImpl {
 
     private static Logger logger = LoggerFactory.getLogger(AzureTableQuery.class);
 
-    /**
-     * Instantiates a new query impl.
-     *
-     * @param kunderaQuery         the kundera query object
-     * @param persistenceDelegator the persistence delegator
-     * @param kunderaMetadata      kundera metadata
-     */
     public AzureTableQuery(KunderaQuery kunderaQuery, PersistenceDelegator persistenceDelegator, EntityManagerFactoryImpl.KunderaMetadata kunderaMetadata) {
         super(kunderaQuery, persistenceDelegator, kunderaMetadata);
     }
@@ -74,11 +69,13 @@ public class AzureTableQuery extends QueryImpl {
         return onUpdateDeleteEvent();
     }
 
+    /*
+     * needed to support scrolling/pagination
+     */
     @Override
     public Iterator iterate() {
         System.out.println("DatastoreQuery.iterate");
-
-        // TODO If planning to build scrolling/pagination, then have a look at ResultIterator implementation
+        // TODO
         //return new ResultIterator(...)
         throw new NotImplementedException();
         // return null;
@@ -88,6 +85,9 @@ public class AzureTableQuery extends QueryImpl {
     protected List findUsingLucene(EntityMetadata entityMetadata, Client client) {
         throw new UnsupportedOperationException("findUsingLucene is currently unsupported for this client");
     }
+
+    /*---------------------------------------------------------------------------------*/
+    /*--------------------- print utils for DEBUG purposes ----------------------------*/
 
     private void printQuery() {
         System.out.println("kunderaQuery = [\n\t" +

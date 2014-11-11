@@ -17,8 +17,13 @@ import java.util.List;
 import java.util.Map;
 
 /**
+ * The gateway to CRUD operations on database, except for queries.
+ *
  * @author Fabio Arcidiacono.
- *         <p>The gateway to CRUD operations on database, except for queries.</p>
+ * @see com.impetus.kundera.client.ClientBase
+ * @see com.impetus.kundera.client.Client
+ * @see it.polimi.client.azuretable.query.AzureTableQuery
+ * @see com.impetus.kundera.generator.AutoGenerator
  */
 public class AzureTableClient extends ClientBase implements Client<AzureTableQuery> {
 

@@ -12,8 +12,10 @@ import org.slf4j.LoggerFactory;
 import java.util.Map;
 
 /**
+ * Used by Kundera to instantiate the Client.
+ *
  * @author Fabio Arcidiacono.
- *         <p>Used by Kundera to instantiate the Client.</p>
+ * @see com.impetus.kundera.loader.GenericClientFactory
  */
 public class AzureTableClientFactory extends GenericClientFactory {
 

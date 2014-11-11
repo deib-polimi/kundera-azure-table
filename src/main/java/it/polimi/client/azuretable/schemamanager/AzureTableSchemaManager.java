@@ -11,19 +11,16 @@ import java.util.List;
 import java.util.Map;
 
 /**
+ * Provide support for automatic schema generation through "kundera_ddl_auto_prepare" property in persistence.xml.
+ *
  * @author Fabio Arcidiacono.
+ * @see com.impetus.kundera.configure.schema.api.AbstractSchemaManager
+ * @see com.impetus.kundera.configure.schema.api.SchemaManager
  */
 public class AzureTableSchemaManager extends AbstractSchemaManager implements SchemaManager {
 
     private static final Logger logger = LoggerFactory.getLogger(AzureTableSchemaManager.class);
 
-    /**
-     * Initialise with configured client factory.
-     *
-     * @param clientFactory      specific client factory.
-     * @param externalProperties external properties
-     * @param kunderaMetadata    kundera metadata
-     */
     public AzureTableSchemaManager(String clientFactory, Map<String, Object> externalProperties, EntityManagerFactoryImpl.KunderaMetadata kunderaMetadata) {
         super(clientFactory, externalProperties, kunderaMetadata);
     }
@@ -71,9 +68,9 @@ public class AzureTableSchemaManager extends AbstractSchemaManager implements Sc
         //TODO
     }
 
-    /**
-     * Method required to drop auto create schema, in case of schema operation as
-     * {create-drop},
+    /*
+     * Method required to drop auto create schema, in case
+     * of schema operation as {create-drop}.
      */
     @Override
     public void dropSchema() {

@@ -11,7 +11,12 @@ import org.slf4j.LoggerFactory;
 import java.util.Map;
 
 /**
+ * Reads datastore specific property from external file specified
+ * through "kundera.client.property" property in persistence.xml.
+ *
  * @author Fabio Arcidiacono.
+ * @see com.impetus.kundera.configure.AbstractPropertyReader
+ * @see com.impetus.kundera.configure.PropertyReader
  */
 public class AzureTablePropertyReader extends AbstractPropertyReader implements PropertyReader {
 

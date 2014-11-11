@@ -11,8 +11,11 @@ import com.impetus.kundera.query.KunderaQuery;
 import java.util.List;
 
 /**
+ * Used by Kundera to translate the queries into correct client method calls.
+ *
  * @author Fabio Arcidiacono.
- *         <p>Used by Kundera to translate the queries into correct client method calls.</p>
+ * @see com.impetus.kundera.persistence.AbstractEntityReader
+ * @see com.impetus.kundera.persistence.EntityReader
  */
 public class AzureTableEntityReader extends AbstractEntityReader implements EntityReader {
 
