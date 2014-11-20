@@ -1,4 +1,4 @@
-package it.polimi.client.datastore.entities;
+package it.polimi.client.azuretable.entities;
 
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -6,7 +6,6 @@ import lombok.NoArgsConstructor;
 import lombok.ToString;
 
 import javax.persistence.*;
-import java.util.Collections;
 import java.util.List;
 
 @Data
@@ -14,21 +13,18 @@ import java.util.List;
 @EqualsAndHashCode(exclude = "employees")
 @NoArgsConstructor
 @Entity
-@Table(name = "ProjectMTM", schema = "azure-test@pu")
-public class ProjectMTM {
+@Table(name = "DepartmentOTM", schema = "gae-test@pu")
+public class DepartmentOTM {
 
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
-    @Column(name = "PROJECT_ID")
+    @Column(name = "DEPARTMENT_ID")
     private String id;
 
     @Column(name = "NAME")
     private String name;
 
-    @ManyToMany(mappedBy = "projects")
-    private List<EmployeeMTM> employees;
-
-    public void addEmployees(EmployeeMTM... employees) {
-        Collections.addAll(this.employees, employees);
-    }
+    /* a department employs many employees */
+    @OneToMany(mappedBy = "department")
+    private List<EmployeeMTObis> employees;
 }

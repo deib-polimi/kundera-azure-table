@@ -1,4 +1,4 @@
-package it.polimi.client.datastore.entities;
+package it.polimi.client.azuretable.entities;
 
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -15,7 +15,7 @@ import java.util.List;
 @EqualsAndHashCode(exclude = "projects")
 @NoArgsConstructor
 @Entity
-@Table(name = "EmployeeMTM", schema = "azure-test@pu")
+@Table(name = "EmployeeMTM", schema = "gae-test@pu")
 public class EmployeeMTM {
 
     @Id

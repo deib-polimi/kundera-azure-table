@@ -1,4 +1,4 @@
-package it.polimi.client.datastore.entities;
+package it.polimi.client.azuretable.entities;
 
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -8,7 +8,7 @@ import javax.persistence.*;
 @Data
 @NoArgsConstructor
 @Entity
-@Table(name = "EmployeeMTO", schema = "azure-test@pu")
+@Table(name = "EmployeeMTO", schema = "gae-test@pu")
 public class EmployeeMTO {
 
     @Id

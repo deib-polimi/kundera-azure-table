@@ -1,4 +1,4 @@
-package it.polimi.client.datastore.entities;
+package it.polimi.client.azuretable.entities;
 
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -8,14 +8,14 @@ import javax.persistence.*;
 @Data
 @NoArgsConstructor
 @Entity
-@Table(name = "Phone", schema = "azure-test@pu")
-public class Phone {
+@Table(name = "Project", schema = "gae-test@pu")
+public class Project {
 
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
-    @Column(name = "PHONE_ID")
+    @Column(name = "PROJECT_ID")
     private String id;
 
-    @Column(name = "NUMBER")
-    private Long number;
+    @Column(name = "NAME")
+    private String name;
 }

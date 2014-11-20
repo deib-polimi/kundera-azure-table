@@ -1,4 +1,4 @@
-package it.polimi.client.datastore.entities;
+package it.polimi.client.azuretable.entities;
 
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -11,7 +11,7 @@ import java.util.List;
 @Data
 @NoArgsConstructor
 @Entity
-@Table(name = "AddressCollection", schema = "azure-test@pu")
+@Table(name = "AddressCollection", schema = "gae-test@pu")
 public class AddressCollection {
 
     @Id
