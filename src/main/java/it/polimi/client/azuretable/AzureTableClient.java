@@ -29,7 +29,7 @@ import java.util.Map;
 public class AzureTableClient extends ClientBase implements Client<AzureTableQuery> {
 
     private EntityReader reader;
-    private CloudTableClient cloudTableClient;
+    private CloudTableClient tableClient;
     private static final Logger logger;
 
     static {
@@ -38,10 +38,10 @@ public class AzureTableClient extends ClientBase implements Client<AzureTableQue
 
     protected AzureTableClient(final KunderaMetadata kunderaMetadata, Map<String, Object> properties,
                                String persistenceUnit, final ClientMetadata clientMetadata, IndexManager indexManager,
-                               EntityReader reader, CloudTableClient cloudTableClient) {
+                               EntityReader reader, CloudTableClient tableClient) {
         super(kunderaMetadata, properties, persistenceUnit);
         this.reader = reader;
-        this.cloudTableClient = cloudTableClient;
+        this.tableClient = tableClient;
         this.indexManager = indexManager;
         this.clientMetadata = clientMetadata;
     }
@@ -50,7 +50,7 @@ public class AzureTableClient extends ClientBase implements Client<AzureTableQue
     public void close() {
         this.indexManager.flush();
         this.reader = null;
-        this.cloudTableClient = null;
+        this.tableClient = null;
         externalProperties = null;
     }
 

@@ -30,7 +30,7 @@ public class AzureTableClientFactory extends GenericClientFactory {
     private EntityReader reader;
     private SchemaManager schemaManager;
     private CloudStorageAccount storageAccount;
-    private CloudTableClient cloudTableClient;
+    private CloudTableClient tableClient;
 
     static {
         logger = LoggerFactory.getLogger(AzureTableClientFactory.class);
@@ -39,7 +39,7 @@ public class AzureTableClientFactory extends GenericClientFactory {
     @Override
     public void initialize(Map<String, Object> puProperties) {
         storageAccount = null;
-        cloudTableClient = null;
+        tableClient = null;
         reader = new AzureTableEntityReader(kunderaMetadata);
         setExternalProperties(puProperties);
     }
@@ -72,17 +72,17 @@ public class AzureTableClientFactory extends GenericClientFactory {
         try {
             storageAccount = CloudStorageAccount.parse(storageConnectionString);
             logger.info("Connected to Tables with connection string: " + storageConnectionString);
-            cloudTableClient = storageAccount.createCloudTableClient();
+            tableClient = storageAccount.createCloudTableClient();
         } catch (URISyntaxException | InvalidKeyException e) {
             throw new ClientLoaderException("Unable to connect to Tables with connection string: " + storageConnectionString, e);
         }
 
-        return cloudTableClient;
+        return tableClient;
     }
 
     @Override
     protected Client instantiateClient(String persistenceUnit) {
-        return new AzureTableClient(kunderaMetadata, externalProperties, persistenceUnit, clientMetadata, indexManager, reader, cloudTableClient);
+        return new AzureTableClient(kunderaMetadata, externalProperties, persistenceUnit, clientMetadata, indexManager, reader, tableClient);
     }
 
     @Override
@@ -96,7 +96,7 @@ public class AzureTableClientFactory extends GenericClientFactory {
             indexManager.close();
         }
         storageAccount = null;
-        cloudTableClient = null;
+        tableClient = null;
         schemaManager = null;
         externalProperties = null;
     }

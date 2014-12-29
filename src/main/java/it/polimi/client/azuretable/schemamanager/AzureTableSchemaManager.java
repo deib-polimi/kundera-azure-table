@@ -29,7 +29,7 @@ import java.util.Map;
 public class AzureTableSchemaManager extends AbstractSchemaManager implements SchemaManager {
 
     private static final Logger logger;
-    private CloudTableClient cloudTableClient;
+    private CloudTableClient tableClient;
 
     static {
         logger = LoggerFactory.getLogger(AzureTableSchemaManager.class);
@@ -95,7 +95,7 @@ public class AzureTableSchemaManager extends AbstractSchemaManager implements Sc
         try {
             CloudStorageAccount storageAccount = CloudStorageAccount.parse(storageConnectionString);
             logger.info("Connected to Tables with connection string: " + storageConnectionString);
-            cloudTableClient = storageAccount.createCloudTableClient();
+            tableClient = storageAccount.createCloudTableClient();
         } catch (URISyntaxException | InvalidKeyException e) {
             throw new ClientLoaderException("Unable to connect to Tables with connection string: " + storageConnectionString, e);
         }
@@ -126,7 +126,7 @@ public class AzureTableSchemaManager extends AbstractSchemaManager implements Sc
         dropSchema();
         for (TableInfo info : tableInfo) {
             try {
-                CloudTable table = cloudTableClient.getTableReference(info.getTableName());
+                CloudTable table = tableClient.getTableReference(info.getTableName());
                 table.createIfNotExist();
             } catch (URISyntaxException | StorageException e) {
                 throw new KunderaException("Some error occurred while creating table " + info.getTableName(), e);
@@ -148,9 +148,9 @@ public class AzureTableSchemaManager extends AbstractSchemaManager implements Sc
      */
     @Override
     public void dropSchema() {
-        for (String table : cloudTableClient.listTables()) {
+        for (String table : tableClient.listTables()) {
             try {
-                cloudTableClient.getTableReference(table).deleteIfExists();
+                tableClient.getTableReference(table).deleteIfExists();
             } catch (URISyntaxException | StorageException e) {
                 throw new KunderaException("Some error occurred while dropping schema", e);
             }

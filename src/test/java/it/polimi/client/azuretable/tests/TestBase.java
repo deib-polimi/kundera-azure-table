@@ -16,8 +16,12 @@ import javax.persistence.Persistence;
 @Slf4j
 public abstract class TestBase {
 
-    /** AzureTable testing tools */
-    // TODO
+    /*
+     * AzureTable testing must be done on cloud since Microsoft does not provide an in-memory stub for Table service.
+     * It is possible (on Windows) to test over Azure Storage Emulator which emulates Table service
+     * over a Microsoft SQL server, differences in behavior are listed at
+     * http://msdn.microsoft.com/en-us/library/azure/gg433135.aspx
+     */
 
     /** JPA stuff */
     private static final String PERSISTENCE_UNIT = "pu";
@@ -29,7 +33,6 @@ public abstract class TestBase {
 
     @Before
     public void setUp() {
-        // TODO azure setup
         emf = Persistence.createEntityManagerFactory(PERSISTENCE_UNIT);
         if (em != null && em.isOpen()) {
             em.close();
@@ -39,9 +42,12 @@ public abstract class TestBase {
 
     @After
     public void tearDown() {
-        em.close();
-        emf.close();
-        // TODO azure tear down
+        if (em != null) {
+            em.close();
+        }
+        if (emf != null) {
+            emf.close();
+        }
     }
 
     /*---------------------------------------------------------------------------------*/
