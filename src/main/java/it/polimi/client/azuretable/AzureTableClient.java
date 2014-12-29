@@ -78,7 +78,10 @@ public class AzureTableClient extends ClientBase implements Client<AzureTableQue
 
     @Override
     public Object generate() {
-        return UUID.randomUUID().toString();
+        // TODO partition key maybe the same for every row in the same table ?
+        String partitionKey = UUID.randomUUID().toString();
+        String rowKey = UUID.randomUUID().toString();
+        return new AzureTableKey(partitionKey, rowKey).toString();
     }
 
     /*---------------------------------------------------------------------------------*/
@@ -93,8 +96,8 @@ public class AzureTableClient extends ClientBase implements Client<AzureTableQue
                 entityMetadata.getPersistenceUnit());
         EntityType entityType = metamodel.entity(entityMetadata.getEntityClazz());
 
-        // TODO partition key maybe the same for every row in the same table ?
-        DynamicEntity tableEntity = new DynamicEntity("" /* partition key */, id.toString());
+        AzureTableKey key = new AzureTableKey(id.toString());
+        DynamicEntity tableEntity = new DynamicEntity(key.getPartitionKey(), key.getRowKey());
 
         handleAttributes(tableEntity, entity, metamodel, entityType.getAttributes());
         handleRelations(tableEntity, entityMetadata, rlHolders);
@@ -106,7 +109,7 @@ public class AzureTableClient extends ClientBase implements Client<AzureTableQue
             tableClient.execute(entityMetadata.getTableName(), insertOperation);
             logger.info(tableEntity.toString());
         } catch (StorageException e) {
-            throw new KunderaException("Some error occurred while persisting entity " + entity, e);
+            throw new KunderaException("Some error occurred while persisting entity: ", e);
         }
     }
 
@@ -145,12 +148,20 @@ public class AzureTableClient extends ClientBase implements Client<AzureTableQue
     }
 
     private void processEmbeddableAttribute(DynamicEntity tableEntity, Object entity, Attribute attribute, MetamodelImpl metamodel) {
-        // TODO Auto-generated method stub
-
+        /* TODO
+         * embedded attributes are not supported, they must be serialized
+         * http://msdn.microsoft.com/library/azure/dd179338.aspx
+         */
     }
 
     private void handleRelations(DynamicEntity tableEntity, EntityMetadata entityMetadata, List<RelationHolder> rlHolders) {
-        // TODO Auto-generated method stub
+        /*
+         * TODO
+         * primary key for and entity is the pair (partitionKey, rowKey)
+         *
+         * TableOperation retrieveOperation = TableOperation.retrieve(partitionKey, rowKey, DynamicEntity.class);
+         * CustomerEntity specificEntity = cloudTable.execute(retrieveOperation).getResultAsType();
+         */
     }
 
     private void handleDiscriminatorColumn(DynamicEntity tableEntity, EntityType entityType) {
@@ -201,8 +212,16 @@ public class AzureTableClient extends ClientBase implements Client<AzureTableQue
      */
     @Override
     public <E> List<E> findAll(Class<E> entityClass, String[] columnsToSelect, Object... keys) {
-        //TODO
-        return null;
+        logger.debug("entityClass = [" + entityClass + "], columnsToSelect = [" + Arrays.toString(columnsToSelect) + "], keys = [" + Arrays.toString(keys) + "]");
+
+        List results = new ArrayList();
+        for (Object key : keys) {
+            Object object = this.find(entityClass, key);
+            if (object != null) {
+                results.add(object);
+            }
+        }
+        return results;
     }
 
     /*
@@ -263,7 +282,19 @@ public class AzureTableClient extends ClientBase implements Client<AzureTableQue
 
     @Override
     public void delete(Object entity, Object pKey) {
-        //TODO
+        logger.debug("entity = [" + entity + "], pKey = [" + pKey + "]");
+
+        AzureTableKey key = new AzureTableKey(pKey.toString());
+        EntityMetadata entityMetadata = KunderaMetadataManager.getEntityMetadata(kunderaMetadata, entity.getClass());
+
+        try {
+            TableOperation retrieveOperation = TableOperation.retrieve(key.getPartitionKey(), key.getRowKey(), DynamicEntity.class);
+            DynamicEntity tableEntity = tableClient.execute(entityMetadata.getTableName(), retrieveOperation).getResultAsType();
+            TableOperation deleteOperation = TableOperation.delete(tableEntity);
+            tableClient.execute(entityMetadata.getTableName(), deleteOperation);
+        } catch (StorageException e) {
+            throw new KunderaException("A problem occurred while deleting the entity: ", e);
+        }
     }
 
     /*
