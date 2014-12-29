@@ -99,7 +99,7 @@ public class AzureTableClient extends ClientBase implements Client<AzureTableQue
         AzureTableKey key = new AzureTableKey(id.toString());
         DynamicEntity tableEntity = new DynamicEntity(key.getPartitionKey(), key.getRowKey());
 
-        handleAttributes(tableEntity, entity, metamodel, entityType.getAttributes());
+        handleAttributes(tableEntity, entity, metamodel, entityMetadata, entityType.getAttributes());
         handleRelations(tableEntity, entityMetadata, rlHolders);
         /* discriminator column is used for JPA inheritance */
         handleDiscriminatorColumn(tableEntity, entityType);
@@ -113,10 +113,12 @@ public class AzureTableClient extends ClientBase implements Client<AzureTableQue
         }
     }
 
-    private void handleAttributes(DynamicEntity tableEntity, Object entity, MetamodelImpl metamodel, Set<Attribute> attributes) {
+    private void handleAttributes(DynamicEntity tableEntity, Object entity, MetamodelImpl metamodel, EntityMetadata entityMetadata, Set<Attribute> attributes) {
+        String idAttribute = ((AbstractAttribute) entityMetadata.getIdAttribute()).getJPAColumnName();
         for (Attribute attribute : attributes) {
+            // By pass ID attribute, is redundant since is also stored within the Key.
             // By pass associations (i.e. relations) that are handled in handleRelations()
-            if (!attribute.isAssociation()) {
+            if (!attribute.isAssociation() && !((AbstractAttribute) attribute).getJPAColumnName().equals(idAttribute)) {
                 if (metamodel.isEmbeddable(((AbstractAttribute) attribute).getBindableJavaType())) {
                     processEmbeddableAttribute(tableEntity, entity, attribute, metamodel);
                 } else {
@@ -200,8 +202,24 @@ public class AzureTableClient extends ClientBase implements Client<AzureTableQue
      */
     @Override
     public Object find(Class entityClass, Object id) {
-        //TODO
-        return null;
+        logger.debug("entityClass = [" + entityClass.getSimpleName() + "], id = [" + id + "]");
+
+        AzureTableKey key = new AzureTableKey(id.toString());
+        EntityMetadata entityMetadata = KunderaMetadataManager.getEntityMetadata(kunderaMetadata, entityClass);
+        return get(entityMetadata.getTableName(), key);
+    }
+
+    private DynamicEntity get(String table, AzureTableKey key) {
+        TableOperation retrieveOperation = TableOperation.retrieve(key.getPartitionKey(), key.getRowKey(), DynamicEntity.class);
+        try {
+            DynamicEntity tableEntity = tableClient.execute(table, retrieveOperation).getResultAsType();
+            if (tableEntity == null) {
+                logger.info("Not found {table = [" + table + "], key = [" + key.toString() + "]}");
+            }
+            return tableEntity;
+        } catch (StorageException e) {
+            throw new KunderaException("A problem occurred while retrieving the entity with key: " + key.toString(), e);
+        }
     }
 
     /*
@@ -286,10 +304,8 @@ public class AzureTableClient extends ClientBase implements Client<AzureTableQue
 
         AzureTableKey key = new AzureTableKey(pKey.toString());
         EntityMetadata entityMetadata = KunderaMetadataManager.getEntityMetadata(kunderaMetadata, entity.getClass());
-
         try {
-            TableOperation retrieveOperation = TableOperation.retrieve(key.getPartitionKey(), key.getRowKey(), DynamicEntity.class);
-            DynamicEntity tableEntity = tableClient.execute(entityMetadata.getTableName(), retrieveOperation).getResultAsType();
+            DynamicEntity tableEntity = get(entityMetadata.getTableName(), key);
             TableOperation deleteOperation = TableOperation.delete(tableEntity);
             tableClient.execute(entityMetadata.getTableName(), deleteOperation);
         } catch (StorageException e) {

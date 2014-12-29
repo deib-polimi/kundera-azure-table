@@ -9,6 +9,7 @@ public class AzureTableKey {
 
     private String rowKey;
     private String partitionKey;
+    public final String SEPARATOR = "_";
 
     public AzureTableKey() {}
 
@@ -21,9 +22,9 @@ public class AzureTableKey {
         if (rawKey == null) {
             throw new NullPointerException("key cannot be null");
         }
-        String[] parts = rawKey.split("_");
+        String[] parts = rawKey.split(SEPARATOR);
         if (parts.length != 2) {
-            throw new RuntimeException("key " + rawKey + ", is malformed and cannot be parsed");
+            throw new RuntimeException("key [" + rawKey + "], is malformed and cannot be parsed");
         }
         this.partitionKey = parts[0];
         this.rowKey = parts[1];
@@ -39,6 +40,6 @@ public class AzureTableKey {
 
     @Override
     public String toString() {
-        return partitionKey + "_" + rowKey;
+        return partitionKey + SEPARATOR + rowKey;
     }
 }
