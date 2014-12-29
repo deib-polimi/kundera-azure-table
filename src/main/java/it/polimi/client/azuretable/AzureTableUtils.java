@@ -2,8 +2,6 @@ package it.polimi.client.azuretable;
 
 import com.impetus.kundera.KunderaException;
 import com.microsoft.windowsazure.services.table.client.EntityProperty;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.*;
 import java.util.Date;
@@ -16,19 +14,14 @@ import java.util.UUID;
  */
 public class AzureTableUtils {
 
-    private static final Logger logger;
-
-    static {
-        logger = LoggerFactory.getLogger(AzureTableUtils.class);
-    }
-
     /**
      * Generate an instance of {@link com.microsoft.windowsazure.services.table.client.EntityProperty}.
-     * If value type is not supported by Table the object is serialized.
      *
      * @param value the value to be wrapped into an {@link com.microsoft.windowsazure.services.table.client.EntityProperty}
      *
      * @return an instance of {@link com.microsoft.windowsazure.services.table.client.EntityProperty} for the given object.
+     *
+     * @throws com.impetus.kundera.KunderaException if type is not supported by AzureTable.
      */
     public static EntityProperty getEntityProperty(Object value) {
         if (value instanceof Boolean) {
@@ -58,12 +51,7 @@ public class AzureTableUtils {
         if (value instanceof UUID) {
             return new EntityProperty((UUID) value);
         }
-        logger.info("Unsupported type " + value.getClass().getCanonicalName() + ", will be serialized.");
-        try {
-            return serialize(value);
-        } catch (IOException e) {
-            throw new KunderaException("Some error occurred serializing unsupported type " + value.getClass().getCanonicalName());
-        }
+        throw new KunderaException("Unsupported type " + value.getClass().getCanonicalName());
     }
 
     /**

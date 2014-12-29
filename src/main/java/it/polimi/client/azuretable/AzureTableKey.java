@@ -11,8 +11,6 @@ public class AzureTableKey {
     private String partitionKey;
     public final String SEPARATOR = "_";
 
-    public AzureTableKey() {}
-
     public AzureTableKey(String partitionKey, String rowKey) {
         this.partitionKey = partitionKey;
         this.rowKey = rowKey;

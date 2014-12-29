@@ -135,7 +135,7 @@ public class AzureTableClient extends ClientBase implements Client<AzureTableQue
 
         if (valueObj instanceof Collection<?> || valueObj instanceof Map<?, ?>) {
             try {
-                logger.debug("field = [" + field.getName() + "], typeColumn = [" + jpaColumnName + "_type], objectType = [" + valueObj.getClass().getName() + "]");
+                logger.debug("field = [" + field.getName() + "], objectType = [" + valueObj.getClass().getName() + "]");
                 valueObj = AzureTableUtils.serialize(valueObj);
             } catch (IOException e) {
                 throw new KunderaException("Some errors occurred while serializing the object: ", e);
@@ -150,10 +150,18 @@ public class AzureTableClient extends ClientBase implements Client<AzureTableQue
     }
 
     private void processEmbeddableAttribute(DynamicEntity tableEntity, Object entity, Attribute attribute, MetamodelImpl metamodel) {
-        /* TODO
-         * embedded attributes are not supported, they must be serialized
-         * http://msdn.microsoft.com/library/azure/dd179338.aspx
-         */
+        Field field = (Field) attribute.getJavaMember();
+        String jpaColumnName = ((AbstractAttribute) attribute).getJPAColumnName();
+        Object embeddedObj = PropertyAccessorHelper.getObject(entity, field);
+        logger.debug("field = [" + field.getName() + "], jpaColumnName = [" + jpaColumnName + "], embeddedObj = [" + embeddedObj + "]");
+
+        //embedded attributes are not supported by AzureTable, they must be serialized
+        try {
+            embeddedObj = AzureTableUtils.serialize(embeddedObj);
+            AzureTableUtils.setPropertyHelper(tableEntity, jpaColumnName, embeddedObj);
+        } catch (IOException e) {
+            throw new KunderaException("Some errors occurred while serializing the object: ", e);
+        }
     }
 
     private void handleRelations(DynamicEntity tableEntity, EntityMetadata entityMetadata, List<RelationHolder> rlHolders) {
