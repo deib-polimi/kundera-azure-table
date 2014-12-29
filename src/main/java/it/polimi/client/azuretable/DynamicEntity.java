@@ -9,6 +9,8 @@ import java.util.HashMap;
  * This class lets you dynamically map java properties to AzureTables not requiring static POJO.
  *
  * @author Marco Scavuzzo
+ * @see it.polimi.client.azuretable.DynamicEntity
+ * @see com.microsoft.windowsazure.services.table.client.EntityProperty
  */
 public class DynamicEntity extends DynamicTableEntity {
 
