@@ -1,21 +1,33 @@
 package it.polimi.client.azuretable;
 
+import com.impetus.kundera.KunderaException;
 import com.impetus.kundera.client.Client;
 import com.impetus.kundera.client.ClientBase;
 import com.impetus.kundera.db.RelationHolder;
+import com.impetus.kundera.generator.AutoGenerator;
 import com.impetus.kundera.index.IndexManager;
+import com.impetus.kundera.metadata.KunderaMetadataManager;
 import com.impetus.kundera.metadata.model.ClientMetadata;
 import com.impetus.kundera.metadata.model.EntityMetadata;
+import com.impetus.kundera.metadata.model.MetamodelImpl;
+import com.impetus.kundera.metadata.model.attributes.AbstractAttribute;
+import com.impetus.kundera.metadata.model.type.AbstractManagedType;
 import com.impetus.kundera.persistence.EntityManagerFactoryImpl.KunderaMetadata;
 import com.impetus.kundera.persistence.EntityReader;
 import com.impetus.kundera.persistence.context.jointable.JoinTableData;
+import com.impetus.kundera.property.PropertyAccessorHelper;
+import com.microsoft.windowsazure.services.core.storage.StorageException;
 import com.microsoft.windowsazure.services.table.client.CloudTableClient;
+import com.microsoft.windowsazure.services.table.client.TableOperation;
 import it.polimi.client.azuretable.query.AzureTableQuery;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.List;
-import java.util.Map;
+import javax.persistence.metamodel.Attribute;
+import javax.persistence.metamodel.EntityType;
+import java.io.IOException;
+import java.lang.reflect.Field;
+import java.util.*;
 
 /**
  * The gateway to CRUD operations on database, except for queries.
@@ -26,7 +38,7 @@ import java.util.Map;
  * @see it.polimi.client.azuretable.query.AzureTableQuery
  * @see com.impetus.kundera.generator.AutoGenerator
  */
-public class AzureTableClient extends ClientBase implements Client<AzureTableQuery> {
+public class AzureTableClient extends ClientBase implements Client<AzureTableQuery>, AutoGenerator {
 
     private EntityReader reader;
     private CloudTableClient tableClient;
@@ -64,12 +76,91 @@ public class AzureTableClient extends ClientBase implements Client<AzureTableQue
         return AzureTableQuery.class;
     }
 
+    @Override
+    public Object generate() {
+        return UUID.randomUUID().toString();
+    }
+
     /*---------------------------------------------------------------------------------*/
-    /*----------------------------- PERSIST OPERATIONS -------------------------------*/
+    /*----------------------------- PERSIST OPERATIONS --------------------------------*/
+    /*---------------------------------------------------------------------------------*/
 
     @Override
     protected void onPersist(EntityMetadata entityMetadata, Object entity, Object id, List<RelationHolder> rlHolders) {
-        //TODO
+        logger.debug("entityMetadata = [" + entityMetadata + "], entity = [" + entity + "], id = [" + id + "], rlHolders = [" + rlHolders + "]");
+
+        MetamodelImpl metamodel = KunderaMetadataManager.getMetamodel(kunderaMetadata,
+                entityMetadata.getPersistenceUnit());
+        EntityType entityType = metamodel.entity(entityMetadata.getEntityClazz());
+
+        // TODO partition key maybe the same for every row in the same table ?
+        DynamicEntity tableEntity = new DynamicEntity("" /* partition key */, id.toString());
+
+        handleAttributes(tableEntity, entity, metamodel, entityType.getAttributes());
+        handleRelations(tableEntity, entityMetadata, rlHolders);
+        /* discriminator column is used for JPA inheritance */
+        handleDiscriminatorColumn(tableEntity, entityType);
+
+        try {
+            TableOperation insertOperation = TableOperation.insertOrReplace(tableEntity);
+            tableClient.execute(entityMetadata.getTableName(), insertOperation);
+            logger.info(tableEntity.toString());
+        } catch (StorageException e) {
+            throw new KunderaException("Some error occurred while persisting entity " + entity, e);
+        }
+    }
+
+    private void handleAttributes(DynamicEntity tableEntity, Object entity, MetamodelImpl metamodel, Set<Attribute> attributes) {
+        for (Attribute attribute : attributes) {
+            // By pass associations (i.e. relations) that are handled in handleRelations()
+            if (!attribute.isAssociation()) {
+                if (metamodel.isEmbeddable(((AbstractAttribute) attribute).getBindableJavaType())) {
+                    processEmbeddableAttribute(tableEntity, entity, attribute, metamodel);
+                } else {
+                    processAttribute(tableEntity, entity, attribute);
+                }
+            }
+        }
+    }
+
+    private void processAttribute(DynamicEntity tableEntity, Object entity, Attribute attribute) {
+        Field field = (Field) attribute.getJavaMember();
+        Object valueObj = PropertyAccessorHelper.getObject(entity, field);
+        String jpaColumnName = ((AbstractAttribute) attribute).getJPAColumnName();
+
+        if (valueObj instanceof Collection<?> || valueObj instanceof Map<?, ?>) {
+            try {
+                logger.debug("field = [" + field.getName() + "], typeColumn = [" + jpaColumnName + "_type], objectType = [" + valueObj.getClass().getName() + "]");
+                valueObj = AzureTableUtils.serialize(valueObj);
+            } catch (IOException e) {
+                throw new KunderaException("Some errors occurred while serializing the object: ", e);
+            }
+        } else if (((Field) attribute.getJavaMember()).getType().isEnum()) {
+            valueObj = valueObj.toString();
+        }
+        if (valueObj != null) {
+            logger.debug("field = [" + field.getName() + "], jpaColumnName = [" + jpaColumnName + "], valueObj = [" + valueObj + "]");
+            AzureTableUtils.setPropertyHelper(tableEntity, jpaColumnName, valueObj);
+        }
+    }
+
+    private void processEmbeddableAttribute(DynamicEntity tableEntity, Object entity, Attribute attribute, MetamodelImpl metamodel) {
+        // TODO Auto-generated method stub
+
+    }
+
+    private void handleRelations(DynamicEntity tableEntity, EntityMetadata entityMetadata, List<RelationHolder> rlHolders) {
+        // TODO Auto-generated method stub
+    }
+
+    private void handleDiscriminatorColumn(DynamicEntity tableEntity, EntityType entityType) {
+        String discriminatorColumn = ((AbstractManagedType) entityType).getDiscriminatorColumn();
+        String discriminatorValue = ((AbstractManagedType) entityType).getDiscriminatorValue();
+
+        if (discriminatorColumn != null && discriminatorValue != null) {
+            logger.debug("discriminatorColumn = [" + discriminatorColumn + "], discriminatorValue = [" + discriminatorValue + "]");
+            AzureTableUtils.setPropertyHelper(tableEntity, discriminatorColumn, discriminatorValue);
+        }
     }
 
     /*
@@ -91,6 +182,7 @@ public class AzureTableClient extends ClientBase implements Client<AzureTableQue
 
     /*---------------------------------------------------------------------------------*/
     /*------------------------------ FIND OPERATIONS ----------------------------------*/
+    /*---------------------------------------------------------------------------------*/
 
     /*
      * it's called to find detached entities
@@ -166,7 +258,8 @@ public class AzureTableClient extends ClientBase implements Client<AzureTableQue
     }
 
     /*---------------------------------------------------------------------------------*/
-    /*----------------------------- DELETE OPERATIONS ----------------------------------*/
+    /*----------------------------- DELETE OPERATIONS ---------------------------------*/
+    /*---------------------------------------------------------------------------------*/
 
     @Override
     public void delete(Object entity, Object pKey) {
