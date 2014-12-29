@@ -3,6 +3,7 @@ package it.polimi.client.azuretable;
 import com.impetus.kundera.KunderaException;
 import com.impetus.kundera.client.Client;
 import com.impetus.kundera.client.ClientBase;
+import com.impetus.kundera.client.EnhanceEntity;
 import com.impetus.kundera.db.RelationHolder;
 import com.impetus.kundera.generator.AutoGenerator;
 import com.impetus.kundera.index.IndexManager;
@@ -16,8 +17,10 @@ import com.impetus.kundera.persistence.EntityManagerFactoryImpl.KunderaMetadata;
 import com.impetus.kundera.persistence.EntityReader;
 import com.impetus.kundera.persistence.context.jointable.JoinTableData;
 import com.impetus.kundera.property.PropertyAccessorHelper;
+import com.impetus.kundera.property.accessor.EnumAccessor;
 import com.microsoft.windowsazure.services.core.storage.StorageException;
 import com.microsoft.windowsazure.services.table.client.CloudTableClient;
+import com.microsoft.windowsazure.services.table.client.EntityProperty;
 import com.microsoft.windowsazure.services.table.client.TableOperation;
 import it.polimi.client.azuretable.query.AzureTableQuery;
 import org.slf4j.Logger;
@@ -212,9 +215,14 @@ public class AzureTableClient extends ClientBase implements Client<AzureTableQue
     public Object find(Class entityClass, Object id) {
         logger.debug("entityClass = [" + entityClass.getSimpleName() + "], id = [" + id + "]");
 
-        AzureTableKey key = new AzureTableKey(id.toString());
-        EntityMetadata entityMetadata = KunderaMetadataManager.getEntityMetadata(kunderaMetadata, entityClass);
-        return get(entityMetadata.getTableName(), key);
+        try {
+            AzureTableKey key = new AzureTableKey(id.toString());
+            EntityMetadata entityMetadata = KunderaMetadataManager.getEntityMetadata(kunderaMetadata, entityClass);
+            DynamicEntity tableEntity = get(entityMetadata.getTableName(), key);
+            return initializeEntity(tableEntity, entityClass);
+        } catch (InstantiationException | IllegalAccessException e) {
+            throw new KunderaException(e);
+        }
     }
 
     private DynamicEntity get(String table, AzureTableKey key) {
@@ -228,6 +236,89 @@ public class AzureTableClient extends ClientBase implements Client<AzureTableQue
         } catch (StorageException e) {
             throw new KunderaException("A problem occurred while retrieving the entity with key: " + key.toString(), e);
         }
+    }
+
+    private Object initializeEntity(DynamicEntity tableEntity, Class entityClass) throws IllegalAccessException, InstantiationException {
+        EntityMetadata entityMetadata = KunderaMetadataManager.getEntityMetadata(kunderaMetadata, entityClass);
+        MetamodelImpl metamodel = KunderaMetadataManager.getMetamodel(kunderaMetadata,
+                entityMetadata.getPersistenceUnit());
+        EntityType entityType = metamodel.entity(entityMetadata.getEntityClazz());
+
+        Map<String, Object> relationMap = new HashMap<>();
+        Object entity = entityMetadata.getEntityClazz().newInstance();
+
+        initializeID(tableEntity, entityMetadata, entity);
+        Set<Attribute> attributes = entityType.getAttributes();
+        for (Attribute attribute : attributes) {
+            if (!attribute.isAssociation()) {
+                if (metamodel.isEmbeddable(((AbstractAttribute) attribute).getBindableJavaType())) {
+                    initializeEmbeddedAttribute(tableEntity, entity, attribute, metamodel);
+                } else {
+                    initializeAttribute(tableEntity, entity, attribute);
+                }
+            } else {
+                initializeRelation(tableEntity, attribute, relationMap);
+            }
+        }
+        logger.info(entity.toString());
+
+        AzureTableKey key = new AzureTableKey(tableEntity.getPartitionKey(), tableEntity.getRowKey());
+        return new EnhanceEntity(entity, key.toString(), relationMap.isEmpty() ? null : relationMap);
+    }
+
+    private void initializeID(DynamicEntity tableEntity, EntityMetadata entityMetadata, Object entity) {
+        String jpaColumnName = ((AbstractAttribute) entityMetadata.getIdAttribute()).getJPAColumnName();
+        AzureTableKey key = new AzureTableKey(tableEntity.getPartitionKey(), tableEntity.getRowKey());
+
+        logger.debug("jpaColumnName = [" + jpaColumnName + "], fieldValue = [" + key.toString() + "]");
+        PropertyAccessorHelper.setId(entity, entityMetadata, key.toString());
+    }
+
+    private void initializeAttribute(DynamicEntity tableEntity, Object entity, Attribute attribute) {
+        String jpaColumnName = ((AbstractAttribute) attribute).getJPAColumnName();
+        EntityProperty entityProperty = tableEntity.getProperties().get(jpaColumnName);
+        Object fieldValue = null;
+
+        // TODO understand when to deserialize
+        // probably write a util that do instance of and call
+        // entityProperty.getValueAsX()
+        /*
+         * if (e instanceof Blob) {
+         *    try {
+         *        fieldValue = AzureTableUtils.deserialize(fieldValue);
+         *    } catch (ClassNotFoundException | IOException e) {
+         *        throw new KunderaException("Some errors occurred while deserializing the object: ", e);
+         *    }
+         * } else
+         */
+        if (((Field) attribute.getJavaMember()).getType().isEnum()) {
+            EnumAccessor accessor = new EnumAccessor();
+            fieldValue = accessor.fromString(((AbstractAttribute) attribute).getBindableJavaType(), entityProperty.getValueAsString());
+        }
+        if (jpaColumnName != null && fieldValue != null) {
+            logger.debug("jpaColumnName = [" + jpaColumnName + "], fieldValue = [" + fieldValue + "]");
+            PropertyAccessorHelper.set(entity, (Field) attribute.getJavaMember(), fieldValue);
+        }
+    }
+
+    private void initializeEmbeddedAttribute(DynamicEntity tableEntity, Object entity, Attribute attribute, MetamodelImpl metamodel) throws IllegalAccessException, InstantiationException {
+        String jpaColumnName = ((AbstractAttribute) attribute).getJPAColumnName();
+        EntityProperty entityProperty = tableEntity.getProperties().get(jpaColumnName);
+
+        if (jpaColumnName != null && entityProperty != null) {
+            logger.debug("jpaColumnName = [" + jpaColumnName + "], embedded entity");
+
+            try {
+                Object embeddedObj = AzureTableUtils.deserialize(entityProperty);
+                PropertyAccessorHelper.set(entity, (Field) attribute.getJavaMember(), embeddedObj);
+            } catch (ClassNotFoundException | IOException e) {
+                throw new KunderaException("Some errors occurred while deserializing the object: ", e);
+            }
+        }
+    }
+
+    private void initializeRelation(DynamicEntity tableEntity, Attribute attribute, Map<String, Object> relationMap) {
+        // TODO Auto-generated method stub
     }
 
     /*
