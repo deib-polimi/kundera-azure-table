@@ -28,21 +28,29 @@ import java.util.Map;
  */
 public class AzureTableClient extends ClientBase implements Client<AzureTableQuery> {
 
-    private static final Logger logger = LoggerFactory.getLogger(AzureTableClient.class);
     private EntityReader reader;
-    public static final String TYPE_SUFFIX = "_type";
+    private CloudTableClient cloudTableClient;
+    private static final Logger logger;
+
+    static {
+        logger = LoggerFactory.getLogger(AzureTableClient.class);
+    }
 
     protected AzureTableClient(final KunderaMetadata kunderaMetadata, Map<String, Object> properties,
                                String persistenceUnit, final ClientMetadata clientMetadata, IndexManager indexManager,
                                EntityReader reader, CloudTableClient cloudTableClient) {
         super(kunderaMetadata, properties, persistenceUnit);
-        //TODO
+        this.reader = reader;
+        this.cloudTableClient = cloudTableClient;
+        this.indexManager = indexManager;
+        this.clientMetadata = clientMetadata;
     }
 
     @Override
     public void close() {
         this.indexManager.flush();
         this.reader = null;
+        this.cloudTableClient = null;
         externalProperties = null;
     }
 

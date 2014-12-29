@@ -1,9 +1,13 @@
 package it.polimi.client.azuretable.schemamanager;
 
+import com.impetus.kundera.PersistenceProperties;
 import com.impetus.kundera.configure.schema.TableInfo;
 import com.impetus.kundera.configure.schema.api.AbstractSchemaManager;
 import com.impetus.kundera.configure.schema.api.SchemaManager;
+import com.impetus.kundera.loader.ClientLoaderException;
 import com.impetus.kundera.persistence.EntityManagerFactoryImpl;
+import com.microsoft.windowsazure.services.core.storage.CloudStorageAccount;
+import com.microsoft.windowsazure.services.table.client.CloudTableClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -19,21 +23,78 @@ import java.util.Map;
  */
 public class AzureTableSchemaManager extends AbstractSchemaManager implements SchemaManager {
 
-    private static final Logger logger = LoggerFactory.getLogger(AzureTableSchemaManager.class);
+    private static final Logger logger;
+    private CloudTableClient cloudTableClient;
+
+    static {
+        logger = LoggerFactory.getLogger(AzureTableSchemaManager.class);
+    }
 
     public AzureTableSchemaManager(String clientFactory, Map<String, Object> externalProperties, EntityManagerFactoryImpl.KunderaMetadata kunderaMetadata) {
         super(clientFactory, externalProperties, kunderaMetadata);
     }
 
+    /*
+     * Need re-implementation because AbstractSchemaManager.exportSchema()
+     * do unsafe split on hostName so if it is null a NullPointerException is thrown and
+     * no DDL can be done since is not necessary to specify hostname for azure tables
+     */
     @Override
     public void exportSchema(final String persistenceUnit, List<TableInfo> schemas) {
-        //TODO
+        this.puMetadata = kunderaMetadata.getApplicationMetadata().getPersistenceUnitMetadata(persistenceUnit);
+        if (externalProperties != null) {
+            this.userName = (String) externalProperties.get(PersistenceProperties.KUNDERA_USERNAME);
+            this.password = (String) externalProperties.get(PersistenceProperties.KUNDERA_PASSWORD);
+            this.operation = (String) externalProperties.get(PersistenceProperties.KUNDERA_DDL_AUTO_PREPARE);
+        }
+        if (this.userName == null) {
+            this.userName = this.puMetadata.getProperty(PersistenceProperties.KUNDERA_USERNAME);
+        }
+        if (this.password == null) {
+            this.password = this.puMetadata.getProperty(PersistenceProperties.KUNDERA_PASSWORD);
+        }
+        if (this.operation == null) {
+            this.operation = this.puMetadata.getProperty(PersistenceProperties.KUNDERA_DDL_AUTO_PREPARE);
+        }
+        if (this.operation != null && initiateClient()) {
+            this.tableInfos = schemas;
+            handleOperations(schemas);
+        }
+    }
+
+    /*
+    * same as super.handleOperations() but cannot use since is private
+    */
+    private void handleOperations(List<TableInfo> tablesInfo) {
+        SchemaOperationType operationType = SchemaOperationType.getInstance(operation);
+
+        switch (operationType) {
+            case createdrop:
+                create_drop(tablesInfo);
+                break;
+            case create:
+                create(tablesInfo);
+                break;
+            case update:
+                update(tablesInfo);
+                break;
+            case validate:
+                validate(tablesInfo);
+                break;
+        }
     }
 
     @Override
     protected boolean initiateClient() {
-        //TODO
-        return false;
+        String storageConnectionString = "DefaultEndpointsProtocol=http;AccountName=" + this.userName + ";AccountKey=" + this.password;
+        try {
+            CloudStorageAccount storageAccount = CloudStorageAccount.parse(storageConnectionString);
+            logger.info("Connected to Tables with connection string: " + storageConnectionString);
+            cloudTableClient = storageAccount.createCloudTableClient();
+        } catch (Exception e) {
+            throw new ClientLoaderException("Unable to connect to Tables with connection string: " + storageConnectionString, e);
+        }
+        return true;
     }
 
     /*
