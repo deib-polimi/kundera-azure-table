@@ -1,5 +1,6 @@
 package it.polimi.client.azuretable.schemamanager;
 
+import com.impetus.kundera.KunderaException;
 import com.impetus.kundera.PersistenceProperties;
 import com.impetus.kundera.configure.schema.TableInfo;
 import com.impetus.kundera.configure.schema.api.AbstractSchemaManager;
@@ -7,10 +8,14 @@ import com.impetus.kundera.configure.schema.api.SchemaManager;
 import com.impetus.kundera.loader.ClientLoaderException;
 import com.impetus.kundera.persistence.EntityManagerFactoryImpl;
 import com.microsoft.windowsazure.services.core.storage.CloudStorageAccount;
+import com.microsoft.windowsazure.services.core.storage.StorageException;
+import com.microsoft.windowsazure.services.table.client.CloudTable;
 import com.microsoft.windowsazure.services.table.client.CloudTableClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.net.URISyntaxException;
+import java.security.InvalidKeyException;
 import java.util.List;
 import java.util.Map;
 
@@ -91,7 +96,7 @@ public class AzureTableSchemaManager extends AbstractSchemaManager implements Sc
             CloudStorageAccount storageAccount = CloudStorageAccount.parse(storageConnectionString);
             logger.info("Connected to Tables with connection string: " + storageConnectionString);
             cloudTableClient = storageAccount.createCloudTableClient();
-        } catch (Exception e) {
+        } catch (URISyntaxException | InvalidKeyException e) {
             throw new ClientLoaderException("Unable to connect to Tables with connection string: " + storageConnectionString, e);
         }
         return true;
@@ -102,7 +107,7 @@ public class AzureTableSchemaManager extends AbstractSchemaManager implements Sc
      */
     @Override
     protected void validate(List<TableInfo> tablesInfo) {
-        //TODO
+        throw new UnsupportedOperationException("DDL validate is unsupported for Table");
     }
 
     /*
@@ -110,7 +115,7 @@ public class AzureTableSchemaManager extends AbstractSchemaManager implements Sc
      */
     @Override
     protected void update(List<TableInfo> tableInfo) {
-        //TODO
+        throw new UnsupportedOperationException("DDL validate is unsupported for Table");
     }
 
     /*
@@ -118,7 +123,15 @@ public class AzureTableSchemaManager extends AbstractSchemaManager implements Sc
      */
     @Override
     protected void create(List<TableInfo> tableInfo) {
-        //TODO
+        dropSchema();
+        for (TableInfo info : tableInfo) {
+            try {
+                CloudTable table = cloudTableClient.getTableReference(info.getTableName());
+                table.createIfNotExist();
+            } catch (URISyntaxException | StorageException e) {
+                throw new KunderaException("Some error occurred while creating table " + info.getTableName(), e);
+            }
+        }
     }
 
     /*
@@ -126,7 +139,7 @@ public class AzureTableSchemaManager extends AbstractSchemaManager implements Sc
      */
     @Override
     protected void create_drop(List<TableInfo> tableInfo) {
-        //TODO
+        create(tableInfo);
     }
 
     /*
@@ -135,7 +148,13 @@ public class AzureTableSchemaManager extends AbstractSchemaManager implements Sc
      */
     @Override
     public void dropSchema() {
-        //TODO
+        for (String table : cloudTableClient.listTables()) {
+            try {
+                cloudTableClient.getTableReference(table).deleteIfExists();
+            } catch (URISyntaxException | StorageException e) {
+                throw new KunderaException("Some error occurred while dropping schema", e);
+            }
+        }
     }
 
     @Override

@@ -13,6 +13,8 @@ import it.polimi.client.azuretable.schemamanager.AzureTableSchemaManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.net.URISyntaxException;
+import java.security.InvalidKeyException;
 import java.util.Map;
 import java.util.Properties;
 
@@ -71,7 +73,7 @@ public class AzureTableClientFactory extends GenericClientFactory {
             storageAccount = CloudStorageAccount.parse(storageConnectionString);
             logger.info("Connected to Tables with connection string: " + storageConnectionString);
             cloudTableClient = storageAccount.createCloudTableClient();
-        } catch (Exception e) {
+        } catch (URISyntaxException | InvalidKeyException e) {
             throw new ClientLoaderException("Unable to connect to Tables with connection string: " + storageConnectionString, e);
         }
 
