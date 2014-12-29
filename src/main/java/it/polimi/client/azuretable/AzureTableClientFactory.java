@@ -1,15 +1,20 @@
 package it.polimi.client.azuretable;
 
+import com.impetus.kundera.PersistenceProperties;
 import com.impetus.kundera.client.Client;
 import com.impetus.kundera.configure.schema.api.SchemaManager;
+import com.impetus.kundera.loader.ClientLoaderException;
 import com.impetus.kundera.loader.GenericClientFactory;
+import com.impetus.kundera.metadata.model.PersistenceUnitMetadata;
 import com.impetus.kundera.persistence.EntityReader;
-import it.polimi.client.azuretable.config.AzureTablePropertyReader;
+import com.microsoft.windowsazure.services.core.storage.CloudStorageAccount;
+import com.microsoft.windowsazure.services.table.client.CloudTableClient;
 import it.polimi.client.azuretable.schemamanager.AzureTableSchemaManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.Map;
+import java.util.Properties;
 
 /**
  * Used by Kundera to instantiate the Client.
@@ -19,45 +24,84 @@ import java.util.Map;
  */
 public class AzureTableClientFactory extends GenericClientFactory {
 
-    private static Logger logger = LoggerFactory.getLogger(AzureTableClientFactory.class);
+    private static Logger logger;
     private EntityReader reader;
     private SchemaManager schemaManager;
+    private CloudStorageAccount storageAccount;
+    private CloudTableClient cloudTableClient;
+
+    static {
+        logger = LoggerFactory.getLogger(AzureTableClientFactory.class);
+    }
 
     @Override
     public void initialize(Map<String, Object> puProperties) {
-        //TODO
+        storageAccount = null;
+        cloudTableClient = null;
         reader = new AzureTableEntityReader(kunderaMetadata);
-        initializePropertyReader();
         setExternalProperties(puProperties);
     }
 
     @Override
     protected Object createPoolOrConnection() {
-        // TODO
-        return null;
+        String pu = getPersistenceUnit();
+        PersistenceUnitMetadata puMetadata = kunderaMetadata.getApplicationMetadata().getPersistenceUnitMetadata(pu);
+        Properties properties = puMetadata.getProperties();
+        String accountName = null;
+        String accountKey = null;
+        if (externalProperties != null) {
+            accountName = (String) externalProperties.get(PersistenceProperties.KUNDERA_USERNAME);
+            accountKey = (String) externalProperties.get(PersistenceProperties.KUNDERA_PASSWORD);
+        }
+        if (accountName == null) {
+            accountName = (String) properties.get(PersistenceProperties.KUNDERA_USERNAME);
+        }
+        if (accountKey == null) {
+            accountKey = (String) properties.get(PersistenceProperties.KUNDERA_PASSWORD);
+        }
+
+        if (accountName == null) {
+            throw new ClientLoaderException("Configuration error, missing storage account name as kundera.username in persistence.xml");
+        }
+        if (accountKey == null) {
+            throw new ClientLoaderException("Configuration error, missing storage account key as kundera.password in persistence.xml");
+        }
+        String storageConnectionString = "DefaultEndpointsProtocol=http;AccountName=" + accountName + ";AccountKey=" + accountKey;
+        try {
+            storageAccount = CloudStorageAccount.parse(storageConnectionString);
+            logger.info("Connected to Tables with connection string: " + storageConnectionString);
+            cloudTableClient = storageAccount.createCloudTableClient();
+        } catch (Exception e) {
+            throw new ClientLoaderException("Unable to connect to Tables with connection string: " + storageConnectionString, e);
+        }
+
+        return cloudTableClient;
     }
 
     @Override
     protected Client instantiateClient(String persistenceUnit) {
-        // TODO
-        return null;
+        return new AzureTableClient(kunderaMetadata, externalProperties, persistenceUnit, clientMetadata, indexManager, reader, cloudTableClient);
     }
 
     @Override
     public boolean isThreadSafe() {
-        // TODO
         return false;
     }
 
     @Override
     public void destroy() {
-        // TODO
+        if (indexManager != null) {
+            indexManager.close();
+        }
+        storageAccount = null;
+        cloudTableClient = null;
+        schemaManager = null;
+        externalProperties = null;
     }
 
     @Override
     public SchemaManager getSchemaManager(Map<String, Object> puProperties) {
         if (schemaManager == null) {
-            initializePropertyReader();
             setExternalProperties(puProperties);
             schemaManager = new AzureTableSchemaManager(this.getClass().getName(), puProperties, kunderaMetadata);
         }
@@ -66,15 +110,6 @@ public class AzureTableClientFactory extends GenericClientFactory {
 
     @Override
     protected void initializeLoadBalancer(String loadBalancingPolicyName) {
-        throw new UnsupportedOperationException("Load balancing feature is not supported in "
-                + this.getClass().getSimpleName());
-    }
-
-    private void initializePropertyReader() {
-        if (propertyReader == null) {
-            propertyReader = new AzureTablePropertyReader(externalProperties, kunderaMetadata.getApplicationMetadata()
-                    .getPersistenceUnitMetadata(getPersistenceUnit()));
-            propertyReader.read(getPersistenceUnit());
-        }
+        throw new UnsupportedOperationException("Load balancing feature is not supported in " + this.getClass().getSimpleName());
     }
 }

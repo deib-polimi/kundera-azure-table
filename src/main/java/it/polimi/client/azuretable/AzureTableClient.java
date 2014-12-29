@@ -9,6 +9,7 @@ import com.impetus.kundera.metadata.model.EntityMetadata;
 import com.impetus.kundera.persistence.EntityManagerFactoryImpl.KunderaMetadata;
 import com.impetus.kundera.persistence.EntityReader;
 import com.impetus.kundera.persistence.context.jointable.JoinTableData;
+import com.microsoft.windowsazure.services.table.client.CloudTableClient;
 import it.polimi.client.azuretable.query.AzureTableQuery;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -33,7 +34,7 @@ public class AzureTableClient extends ClientBase implements Client<AzureTableQue
 
     protected AzureTableClient(final KunderaMetadata kunderaMetadata, Map<String, Object> properties,
                                String persistenceUnit, final ClientMetadata clientMetadata, IndexManager indexManager,
-                               EntityReader reader) {
+                               EntityReader reader, CloudTableClient cloudTableClient) {
         super(kunderaMetadata, properties, persistenceUnit);
         //TODO
     }

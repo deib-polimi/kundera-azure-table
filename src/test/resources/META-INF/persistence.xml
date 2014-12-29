@@ -28,6 +28,9 @@
         <exclude-unlisted-classes>true</exclude-unlisted-classes>
         <properties>
             <property name="kundera.keyspace" value="azure-test"/>
+            <!-- required, username maps to storage account name, password maps to storage account key -->
+            <property name="kundera.username" value="your_storage_account"/>
+            <property name="kundera.password" value="your_storage_account_key"/>
             <property name="kundera.client.lookup.class" value="it.polimi.client.azuretable.AzureTableClientFactory"/>
         </properties>
     </persistence-unit>
