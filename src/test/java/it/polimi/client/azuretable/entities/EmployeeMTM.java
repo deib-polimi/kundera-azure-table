@@ -15,7 +15,7 @@ import java.util.List;
 @EqualsAndHashCode(exclude = "projects")
 @NoArgsConstructor
 @Entity
-@Table(name = "EmployeeMTM", schema = "gae-test@pu")
+@Table(name = "EmployeeMTM", schema = "azure-test@pu")
 public class EmployeeMTM {
 
     @Id
@@ -37,7 +37,7 @@ public class EmployeeMTM {
 
     public void addProjects(ProjectMTM... projects) {
         if (this.projects == null) {
-            this.projects = new ArrayList<ProjectMTM>();
+            this.projects = new ArrayList<>();
         }
         Collections.addAll(this.projects, projects);
     }

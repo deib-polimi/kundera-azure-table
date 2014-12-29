@@ -11,7 +11,7 @@ import java.util.List;
 @Data
 @NoArgsConstructor
 @Entity
-@Table(name = "AddressCollection", schema = "gae-test@pu")
+@Table(name = "AddressCollection", schema = "azure-test@pu")
 public class AddressCollection {
 
     @Id
@@ -23,7 +23,7 @@ public class AddressCollection {
     private List<String> streets;
 
     public void setStreets(String... streets) {
-        this.streets = new ArrayList<String>();
+        this.streets = new ArrayList<>();
         Collections.addAll(this.streets, streets);
     }
 }

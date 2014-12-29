@@ -11,7 +11,7 @@ import javax.persistence.Table;
 @Data
 @NoArgsConstructor
 @Entity
-@Table(name = "PhoneLong", schema = "gae-test@pu")
+@Table(name = "PhoneLong", schema = "azure-test@pu")
 public class PhoneLong {
 
     @Id

@@ -8,7 +8,7 @@ import javax.persistence.*;
 @Data
 @NoArgsConstructor
 @Entity
-@Table(name = "EmployeeMTObis", schema = "gae-test@pu")
+@Table(name = "EmployeeMTObis", schema = "azure-test@pu")
 public class EmployeeMTObis {
 
     @Id

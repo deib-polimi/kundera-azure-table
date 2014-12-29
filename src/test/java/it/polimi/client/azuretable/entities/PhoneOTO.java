@@ -12,7 +12,7 @@ import javax.persistence.*;
 @EqualsAndHashCode(exclude = "employee")
 @NoArgsConstructor
 @Entity
-@Table(name = "PhoneOTO", schema = "gae-test@pu")
+@Table(name = "PhoneOTO", schema = "azure-test@pu")
 public class PhoneOTO {
 
     @Id
