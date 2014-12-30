@@ -82,9 +82,11 @@ public class AzureTableClient extends ClientBase implements Client<AzureTableQue
     @Override
     public Object generate() {
         // TODO partition key maybe the same for every row in the same table ?
+        // problem: if is user  to set it, no problem, but here is impossible to assign
+        // a partition key per table since is not available the table here
         String partitionKey = UUID.randomUUID().toString();
         String rowKey = UUID.randomUUID().toString();
-        return new AzureTableKey(partitionKey, rowKey).toString();
+        return AzureTableKey.asString(partitionKey, rowKey);
     }
 
     /*---------------------------------------------------------------------------------*/
@@ -262,16 +264,16 @@ public class AzureTableClient extends ClientBase implements Client<AzureTableQue
         }
         logger.info(entity.toString());
 
-        AzureTableKey key = new AzureTableKey(tableEntity.getPartitionKey(), tableEntity.getRowKey());
-        return new EnhanceEntity(entity, key.toString(), relationMap.isEmpty() ? null : relationMap);
+        String pKey = AzureTableKey.asString(tableEntity.getPartitionKey(), tableEntity.getRowKey());
+        return new EnhanceEntity(entity, pKey, relationMap.isEmpty() ? null : relationMap);
     }
 
     private void initializeID(DynamicEntity tableEntity, EntityMetadata entityMetadata, Object entity) {
         String jpaColumnName = ((AbstractAttribute) entityMetadata.getIdAttribute()).getJPAColumnName();
-        AzureTableKey key = new AzureTableKey(tableEntity.getPartitionKey(), tableEntity.getRowKey());
+        String pKey = AzureTableKey.asString(tableEntity.getPartitionKey(), tableEntity.getRowKey());
 
-        logger.debug("jpaColumnName = [" + jpaColumnName + "], fieldValue = [" + key.toString() + "]");
-        PropertyAccessorHelper.setId(entity, entityMetadata, key.toString());
+        logger.debug("jpaColumnName = [" + jpaColumnName + "], fieldValue = [" + pKey + "]");
+        PropertyAccessorHelper.setId(entity, entityMetadata, pKey);
     }
 
     private void initializeAttribute(DynamicEntity tableEntity, Object entity, Attribute attribute) {
