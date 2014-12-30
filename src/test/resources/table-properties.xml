@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<clientProperties>
+    <datastores>
+        <dataStore>
+            <name>azure-table</name>
+            <connection>
+                <properties>
+                    <!--
+                        optional, if present and value is true storage emulator is used.
+                        note: using dev server, kundera.username and kundera.password in persistence xml are ignored
+                    -->
+                    <property name="table.devserver" value="true"></property>
+                    <!--
+                        optional, if using storage emulator set the value for a http proxy
+                        <property name="table.devserver.proxy" value="http://myProxyUri"></property>
+                    -->
+
+                    <!-- optional, protocol to be used within requests http or https (default is http) -->
+                    <property name="table.protocol" value="http"></property>
+                </properties>
+            </connection>
+        </dataStore>
+    </datastores>
+</clientProperties>

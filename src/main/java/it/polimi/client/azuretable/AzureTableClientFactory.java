@@ -2,6 +2,7 @@ package it.polimi.client.azuretable;
 
 import com.impetus.kundera.PersistenceProperties;
 import com.impetus.kundera.client.Client;
+import com.impetus.kundera.configure.ClientProperties;
 import com.impetus.kundera.configure.schema.api.SchemaManager;
 import com.impetus.kundera.loader.ClientLoaderException;
 import com.impetus.kundera.loader.GenericClientFactory;
@@ -9,6 +10,9 @@ import com.impetus.kundera.metadata.model.PersistenceUnitMetadata;
 import com.impetus.kundera.persistence.EntityReader;
 import com.microsoft.windowsazure.services.core.storage.CloudStorageAccount;
 import com.microsoft.windowsazure.services.table.client.CloudTableClient;
+import it.polimi.client.azuretable.config.AzureTableConstants;
+import it.polimi.client.azuretable.config.AzureTablePropertyReader;
+import it.polimi.client.azuretable.config.AzureTablePropertyReader.AzureTableSchemaMetadata;
 import it.polimi.client.azuretable.schemamanager.AzureTableSchemaManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -41,11 +45,39 @@ public class AzureTableClientFactory extends GenericClientFactory {
         storageAccount = null;
         tableClient = null;
         reader = new AzureTableEntityReader(kunderaMetadata);
+        initializePropertyReader();
         setExternalProperties(puProperties);
     }
 
     @Override
     protected Object createPoolOrConnection() {
+        String storageConnectionString = buildConnectionString();
+        try {
+            storageAccount = CloudStorageAccount.parse(storageConnectionString);
+            logger.info("Connected to Tables with connection string: " + storageConnectionString);
+            tableClient = storageAccount.createCloudTableClient();
+            return tableClient;
+        } catch (URISyntaxException | InvalidKeyException e) {
+            throw new ClientLoaderException("Unable to connect to Tables with connection string: " + storageConnectionString, e);
+        }
+    }
+
+    private String buildConnectionString() {
+        String protocol = "http";
+        Properties tableProperties = getClientSpecificProperties();
+        if (tableProperties != null) {
+            if (useDevServer(tableProperties)) {
+                String devProxy = parseDevProxy(tableProperties);
+                if (devProxy != null) {
+                    return "UseDevelopmentStorage=true;DevelopmentStorageProxyUri=" + devProxy;
+                }
+                return "UseDevelopmentStorage=true";
+            }
+            if (useHttps(tableProperties)) {
+                protocol = "https";
+            }
+        }
+
         String pu = getPersistenceUnit();
         PersistenceUnitMetadata puMetadata = kunderaMetadata.getApplicationMetadata().getPersistenceUnitMetadata(pu);
         Properties properties = puMetadata.getProperties();
@@ -62,23 +94,13 @@ public class AzureTableClientFactory extends GenericClientFactory {
             accountKey = (String) properties.get(PersistenceProperties.KUNDERA_PASSWORD);
         }
 
-        // TODO maybe add possibility to specify directly the Host and connect using it as storageURI
         if (accountName == null) {
             throw new ClientLoaderException("Configuration error, missing storage account name as kundera.username in persistence.xml");
         }
         if (accountKey == null) {
             throw new ClientLoaderException("Configuration error, missing storage account key as kundera.password in persistence.xml");
         }
-        String storageConnectionString = "DefaultEndpointsProtocol=http;AccountName=" + accountName + ";AccountKey=" + accountKey;
-        try {
-            storageAccount = CloudStorageAccount.parse(storageConnectionString);
-            logger.info("Connected to Tables with connection string: " + storageConnectionString);
-            tableClient = storageAccount.createCloudTableClient();
-        } catch (URISyntaxException | InvalidKeyException e) {
-            throw new ClientLoaderException("Unable to connect to Tables with connection string: " + storageConnectionString, e);
-        }
-
-        return tableClient;
+        return "DefaultEndpointsProtocol=" + protocol + ";AccountName=" + accountName + ";AccountKey=" + accountKey;
     }
 
     @Override
@@ -105,6 +127,7 @@ public class AzureTableClientFactory extends GenericClientFactory {
     @Override
     public SchemaManager getSchemaManager(Map<String, Object> puProperties) {
         if (schemaManager == null) {
+            initializePropertyReader();
             setExternalProperties(puProperties);
             schemaManager = new AzureTableSchemaManager(this.getClass().getName(), puProperties, kunderaMetadata);
         }
@@ -114,5 +137,58 @@ public class AzureTableClientFactory extends GenericClientFactory {
     @Override
     protected void initializeLoadBalancer(String loadBalancingPolicyName) {
         throw new UnsupportedOperationException("Load balancing feature is not supported in " + this.getClass().getSimpleName());
+    }
+
+    private void initializePropertyReader() {
+        if (propertyReader == null) {
+            propertyReader = new AzureTablePropertyReader(externalProperties,
+                    kunderaMetadata.getApplicationMetadata().getPersistenceUnitMetadata(getPersistenceUnit()));
+            propertyReader.read(getPersistenceUnit());
+        }
+    }
+
+    private boolean useDevServer(Properties properties) {
+        String devServer = (String) properties.get(AzureTableConstants.DEV_SERVER);
+        if (devServer != null && !devServer.isEmpty()) {
+            try {
+                return Boolean.parseBoolean(devServer);
+            } catch (NumberFormatException nfe) {
+                throw new ClientLoaderException("Invalid dev server value " + devServer + ": ", nfe);
+            }
+        }
+        return false;
+    }
+
+    private String parseDevProxy(Properties properties) {
+        String devProxy = (String) properties.get(AzureTableConstants.DEV_PROXY);
+        if (devProxy != null && !devProxy.isEmpty()) {
+            return devProxy;
+        }
+        return null;
+    }
+
+    private boolean useHttps(Properties properties) {
+        String protocol = (String) properties.get(AzureTableConstants.PROTOCOL);
+        if (protocol != null && !protocol.isEmpty()) {
+            if (protocol.equalsIgnoreCase("HTTPS")) {
+                return true;
+            } else if (protocol.equalsIgnoreCase("HTTP")) {
+                return false;
+            }
+            throw new ClientLoaderException("Invalid protocol " + protocol);
+        }
+        return false;
+    }
+
+    private Properties getClientSpecificProperties() {
+        AzureTableSchemaMetadata metadata = AzureTablePropertyReader.asm;
+        ClientProperties clientProperties = metadata != null ? metadata.getClientProperties() : null;
+        if (clientProperties != null) {
+            ClientProperties.DataStore dataStore = metadata.getDataStore();
+            if (dataStore != null && dataStore.getConnection() != null) {
+                return dataStore.getConnection().getProperties();
+            }
+        }
+        return null;
     }
 }

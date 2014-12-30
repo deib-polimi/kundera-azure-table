@@ -31,8 +31,40 @@
             <!-- required, username maps to storage account name, password maps to storage account key -->
             <property name="kundera.username" value="your_storage_account"/>
             <property name="kundera.password" value="your_storage_account_key"/>
-            <!-- 'create' or 'create-drop' -->
-            <property name="kundera.ddl.auto.prepare" value="create"/>
+            <property name="kundera.client.lookup.class" value="it.polimi.client.azuretable.AzureTableClientFactory"/>
+        </properties>
+    </persistence-unit>
+
+    <persistence-unit name="dev-pu">
+        <provider>com.impetus.kundera.KunderaPersistence</provider>
+        <class>it.polimi.client.azuretable.entities.Address</class>
+        <class>it.polimi.client.azuretable.entities.AddressCollection</class>
+        <class>it.polimi.client.azuretable.entities.Department</class>
+        <class>it.polimi.client.azuretable.entities.DepartmentOTM</class>
+        <class>it.polimi.client.azuretable.entities.Employee</class>
+        <class>it.polimi.client.azuretable.entities.EmployeeEmbedded</class>
+        <class>it.polimi.client.azuretable.entities.EmployeeMTM</class>
+        <class>it.polimi.client.azuretable.entities.EmployeeMTO</class>
+        <class>it.polimi.client.azuretable.entities.EmployeeMTObis</class>
+        <class>it.polimi.client.azuretable.entities.EmployeeOTO</class>
+        <class>it.polimi.client.azuretable.entities.EmployeeOTObis</class>
+        <class>it.polimi.client.azuretable.entities.Phone</class>
+        <class>it.polimi.client.azuretable.entities.PhoneEnum</class>
+        <class>it.polimi.client.azuretable.entities.PhoneInvalid1</class>
+        <class>it.polimi.client.azuretable.entities.PhoneInvalid2</class>
+        <class>it.polimi.client.azuretable.entities.PhoneLong</class>
+        <class>it.polimi.client.azuretable.entities.PhoneOTO</class>
+        <class>it.polimi.client.azuretable.entities.PhoneString</class>
+        <class>it.polimi.client.azuretable.entities.PhoneType</class>
+        <class>it.polimi.client.azuretable.entities.Project</class>
+        <class>it.polimi.client.azuretable.entities.ProjectMTM</class>
+        <exclude-unlisted-classes>true</exclude-unlisted-classes>
+        <properties>
+            <property name="kundera.keyspace" value="azure-test"/>
+            <!-- optional, 'create' or 'create-drop' -->
+            <property name="kundera.ddl.auto.prepare" value="create-drop"/>
+            <!-- optional, datastore specific properties -->
+            <property name="kundera.client.property" value="table-properties.xml"/>
             <property name="kundera.client.lookup.class" value="it.polimi.client.azuretable.AzureTableClientFactory"/>
         </properties>
     </persistence-unit>
