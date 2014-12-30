@@ -20,10 +20,7 @@ import com.impetus.kundera.persistence.context.jointable.JoinTableData;
 import com.impetus.kundera.property.PropertyAccessorHelper;
 import com.impetus.kundera.property.accessor.EnumAccessor;
 import com.microsoft.windowsazure.services.core.storage.StorageException;
-import com.microsoft.windowsazure.services.table.client.CloudTable;
-import com.microsoft.windowsazure.services.table.client.CloudTableClient;
-import com.microsoft.windowsazure.services.table.client.EntityProperty;
-import com.microsoft.windowsazure.services.table.client.TableOperation;
+import com.microsoft.windowsazure.services.table.client.*;
 import it.polimi.client.azuretable.query.AzureTableQuery;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -91,7 +88,7 @@ public class AzureTableClient extends ClientBase implements Client<AzureTableQue
          */
         String partitionKey = "DEFAULT";
         String rowKey = UUID.randomUUID().toString();
-        // return string representation since Kundera does not support "external" data types
+        // return string representation since Kundera does not support "unknown" data types
         return AzureTableKey.asString(partitionKey, rowKey);
     }
 
@@ -297,7 +294,7 @@ public class AzureTableClient extends ClientBase implements Client<AzureTableQue
         for (Attribute attribute : attributes) {
             if (!attribute.isAssociation()) {
                 if (metamodel.isEmbeddable(((AbstractAttribute) attribute).getBindableJavaType())) {
-                    initializeEmbeddedAttribute(tableEntity, entity, attribute, metamodel);
+                    initializeEmbeddedAttribute(tableEntity, entity, attribute);
                 } else {
                     initializeAttribute(tableEntity, entity, attribute);
                 }
@@ -348,7 +345,7 @@ public class AzureTableClient extends ClientBase implements Client<AzureTableQue
         return type.getClass().isAssignableFrom(Collection.class) || type.getClass().isAssignableFrom(Map.class);
     }
 
-    private void initializeEmbeddedAttribute(DynamicEntity tableEntity, Object entity, Attribute attribute, MetamodelImpl metamodel) throws IllegalAccessException, InstantiationException {
+    private void initializeEmbeddedAttribute(DynamicEntity tableEntity, Object entity, Attribute attribute) {
         String jpaColumnName = ((AbstractAttribute) attribute).getJPAColumnName();
         EntityProperty entityProperty = tableEntity.getProperties().get(jpaColumnName);
 
@@ -411,13 +408,25 @@ public class AzureTableClient extends ClientBase implements Client<AzureTableQue
      * is supposed to retrieve the initialized objects.
      *
      * for example:
-     *      select * from EmployeeMTObis (entityClass)
+     *      select * from EmployeeMTObis (table name of entityClass)
      *      where DEPARTMENT_ID (colName) equals (colValue)
      */
     @Override
     public List<Object> findByRelation(String colName, Object colValue, Class entityClass) {
-        //TODO
-        return null;
+        logger.debug("colName = [" + colName + "], colValue = [" + colValue + "], entityClazz = [" + entityClass + "]");
+
+        EntityMetadata entityMetadata = KunderaMetadataManager.getEntityMetadata(kunderaMetadata, entityClass);
+        String tableName = entityMetadata.getTableName();
+        // pass through AzureTableKey just for validation
+        AzureTableKey targetKey = new AzureTableKey(colValue.toString());
+
+        TableQuery<DynamicEntity> query = generateRelationQuery(tableName, colName, targetKey.toString());
+        List<Object> results = new ArrayList<>();
+        for (DynamicEntity entity : tableClient.execute(query)) {
+            String entityKey = AzureTableKey.asString(entity.getPartitionKey(), entity.getRowKey());
+            results.add(find(entityClass, entityKey));
+        }
+        return results;
     }
 
     /* (non-Javadoc)
@@ -483,5 +492,14 @@ public class AzureTableClient extends ClientBase implements Client<AzureTableQue
     @Override
     public void deleteByColumn(String schemaName, String tableName, String columnName, Object columnValue) {
         //TODO
+    }
+
+    /*---------------------------------------------------------------------------------*/
+    /*-------------------------------- QUERY UTILS ------------------------------------*/
+    /*---------------------------------------------------------------------------------*/
+
+    private TableQuery<DynamicEntity> generateRelationQuery(String tableName, String columnName, String targetKey) {
+        return TableQuery.from(tableName, DynamicEntity.class)
+                .where(TableQuery.generateFilterCondition(columnName, TableQuery.QueryComparisons.EQUAL, targetKey));
     }
 }
