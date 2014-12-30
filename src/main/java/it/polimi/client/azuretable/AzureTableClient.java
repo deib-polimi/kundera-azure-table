@@ -88,7 +88,7 @@ public class AzureTableClient extends ClientBase implements Client<AzureTableQue
          */
         String partitionKey = "DEFAULT";
         String rowKey = UUID.randomUUID().toString();
-        // return string representation since Kundera does not support "unknown" data types
+        // return string representation since Kundera does not support AzureTableKey as data type
         return AzureTableKey.asString(partitionKey, rowKey);
     }
 
@@ -100,12 +100,10 @@ public class AzureTableClient extends ClientBase implements Client<AzureTableQue
     protected void onPersist(EntityMetadata entityMetadata, Object entity, Object id, List<RelationHolder> rlHolders) {
         logger.debug("entityMetadata = [" + entityMetadata + "], entity = [" + entity + "], id = [" + id + "], rlHolders = [" + rlHolders + "]");
 
-        MetamodelImpl metamodel = KunderaMetadataManager.getMetamodel(kunderaMetadata,
-                entityMetadata.getPersistenceUnit());
+        MetamodelImpl metamodel = KunderaMetadataManager.getMetamodel(kunderaMetadata, entityMetadata.getPersistenceUnit());
         EntityType entityType = metamodel.entity(entityMetadata.getEntityClazz());
 
-        AzureTableKey key = new AzureTableKey(id.toString());
-        DynamicEntity tableEntity = new DynamicEntity(key.getPartitionKey(), key.getRowKey());
+        DynamicEntity tableEntity = AzureTableUtils.createDynamicEntity(entityMetadata, id);
 
         handleAttributes(tableEntity, entity, metamodel, entityMetadata, entityType.getAttributes());
         handleRelations(tableEntity, entityMetadata, rlHolders);
@@ -128,7 +126,7 @@ public class AzureTableClient extends ClientBase implements Client<AzureTableQue
             // By pass associations (i.e. relations) that are handled in handleRelations()
             if (!attribute.isAssociation() && !((AbstractAttribute) attribute).getJPAColumnName().equals(idAttribute)) {
                 if (metamodel.isEmbeddable(((AbstractAttribute) attribute).getBindableJavaType())) {
-                    processEmbeddableAttribute(tableEntity, entity, attribute, metamodel);
+                    processEmbeddableAttribute(tableEntity, entity, attribute);
                 } else {
                     processAttribute(tableEntity, entity, attribute);
                 }
@@ -151,13 +149,14 @@ public class AzureTableClient extends ClientBase implements Client<AzureTableQue
         } else if (((Field) attribute.getJavaMember()).getType().isEnum()) {
             valueObj = valueObj.toString();
         }
+
         if (valueObj != null) {
             logger.debug("field = [" + field.getName() + "], jpaColumnName = [" + jpaColumnName + "], valueObj = [" + valueObj + "]");
             AzureTableUtils.setPropertyHelper(tableEntity, jpaColumnName, valueObj);
         }
     }
 
-    private void processEmbeddableAttribute(DynamicEntity tableEntity, Object entity, Attribute attribute, MetamodelImpl metamodel) {
+    private void processEmbeddableAttribute(DynamicEntity tableEntity, Object entity, Attribute attribute) {
         Field field = (Field) attribute.getJavaMember();
         String jpaColumnName = ((AbstractAttribute) attribute).getJPAColumnName();
         Object embeddedObj = PropertyAccessorHelper.getObject(entity, field);
@@ -261,6 +260,11 @@ public class AzureTableClient extends ClientBase implements Client<AzureTableQue
             AzureTableKey key = new AzureTableKey(id.toString());
             EntityMetadata entityMetadata = KunderaMetadataManager.getEntityMetadata(kunderaMetadata, entityClass);
             DynamicEntity tableEntity = get(entityMetadata.getTableName(), key);
+            if (tableEntity == null) {
+                /* case not found */
+                return null;
+            }
+            logger.info(tableEntity.toString());
             return initializeEntity(tableEntity, entityClass);
         } catch (InstantiationException | IllegalAccessException e) {
             throw new KunderaException(e);
@@ -282,8 +286,7 @@ public class AzureTableClient extends ClientBase implements Client<AzureTableQue
 
     private Object initializeEntity(DynamicEntity tableEntity, Class entityClass) throws IllegalAccessException, InstantiationException {
         EntityMetadata entityMetadata = KunderaMetadataManager.getEntityMetadata(kunderaMetadata, entityClass);
-        MetamodelImpl metamodel = KunderaMetadataManager.getMetamodel(kunderaMetadata,
-                entityMetadata.getPersistenceUnit());
+        MetamodelImpl metamodel = KunderaMetadataManager.getMetamodel(kunderaMetadata, entityMetadata.getPersistenceUnit());
         EntityType entityType = metamodel.entity(entityMetadata.getEntityClazz());
 
         Map<String, Object> relationMap = new HashMap<>();
@@ -368,6 +371,7 @@ public class AzureTableClient extends ClientBase implements Client<AzureTableQue
         logger.debug("jpaColumnName = [" + jpaColumnName + "], fieldValue = [" + fieldValue + "]");
 
         if (jpaColumnName != null && fieldValue != null) {
+            // field value is a string representation of an AzureTableKey
             relationMap.put(jpaColumnName, fieldValue);
         }
     }

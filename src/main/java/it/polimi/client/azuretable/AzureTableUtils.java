@@ -1,6 +1,7 @@
 package it.polimi.client.azuretable;
 
 import com.impetus.kundera.KunderaException;
+import com.impetus.kundera.metadata.model.EntityMetadata;
 import com.microsoft.windowsazure.services.table.client.EntityProperty;
 
 import java.io.*;
@@ -15,82 +16,38 @@ import java.util.UUID;
 public class AzureTableUtils {
 
     /**
-     * Generate an instance of {@link com.microsoft.windowsazure.services.table.client.EntityProperty}.
+     * Generate a {@link it.polimi.client.azuretable.DynamicEntity} from
+     * {@link com.impetus.kundera.metadata.model.EntityMetadata}.
      *
-     * @param value the value to be wrapped into an {@link com.microsoft.windowsazure.services.table.client.EntityProperty}
+     * @param entityMetadata metadata from Kundera ({@link com.impetus.kundera.persistence.EntityManagerFactoryImpl.KunderaMetadata}).
+     * @param id             entity id.
      *
-     * @return an instance of {@link com.microsoft.windowsazure.services.table.client.EntityProperty} for the given object.
+     * @return a fresh new  {@link it.polimi.client.azuretable.DynamicEntity}
      *
-     * @throws com.impetus.kundera.KunderaException if type is not supported by AzureTable.
+     * @throws com.impetus.kundera.KunderaException if id is not of type {@link String}.
+     * @see it.polimi.client.azuretable.DynamicEntity
      */
-    public static EntityProperty getEntityProperty(Object value) {
-        if (value instanceof Boolean) {
-            return new EntityProperty((Boolean) value);
+    public static DynamicEntity createDynamicEntity(EntityMetadata entityMetadata, Object id) {
+        Class idClazz = entityMetadata.getIdAttribute().getJavaType();
+        if (!(idClazz.equals(String.class))) {
+            throw new KunderaException("Id attribute must be of type " + String.class);
         }
-        if (value instanceof byte[]) {
-            return new EntityProperty((byte[]) value);
-        }
-        if (value instanceof Byte[]) {
-            return new EntityProperty((Byte[]) value);
-        }
-        if (value instanceof Date) {
-            return new EntityProperty((Date) value);
-        }
-        if (value instanceof Double) {
-            return new EntityProperty((Double) value);
-        }
-        if (value instanceof Integer) {
-            return new EntityProperty((Integer) value);
-        }
-        if (value instanceof Long) {
-            return new EntityProperty((Long) value);
-        }
-        if (value instanceof String) {
-            return new EntityProperty((String) value);
-        }
-        if (value instanceof UUID) {
-            return new EntityProperty((UUID) value);
-        }
-        throw new KunderaException("Unsupported type " + value.getClass().getCanonicalName());
+        return createDynamicEntity((String) id);
     }
 
     /**
-     * Retrieve the property value from an {@link com.microsoft.windowsazure.services.table.client.EntityProperty}.
+     * Generate a {@link it.polimi.client.azuretable.DynamicEntity}.
      *
-     * @param entityProperty the property container
-     * @param type           type class of the property to be retrieved
+     * @param id string representation of {@link it.polimi.client.azuretable.AzureTableKey}.
      *
-     * @return the retrieved property
+     * @return a fresh new  {@link it.polimi.client.azuretable.DynamicEntity}
+     *
+     * @see it.polimi.client.azuretable.AzureTableKey
+     * @see it.polimi.client.azuretable.DynamicEntity
      */
-    public static Object getPropertyValue(EntityProperty entityProperty, Class<?> type) {
-        if (type.getClass().isAssignableFrom(Boolean.class)) {
-            return entityProperty.getValueAsBoolean();
-        }
-        if (type.getClass().isAssignableFrom(byte[].class)) {
-            return entityProperty.getValueAsByteArray();
-        }
-        if (type.getClass().isAssignableFrom(Byte[].class)) {
-            return entityProperty.getValueAsByteObjectArray();
-        }
-        if (type.getClass().isAssignableFrom(Date.class)) {
-            return entityProperty.getValueAsDate();
-        }
-        if (type.getClass().isAssignableFrom(Double.class)) {
-            return entityProperty.getValueAsDouble();
-        }
-        if (type.getClass().isAssignableFrom(Integer.class)) {
-            return entityProperty.getValueAsInteger();
-        }
-        if (type.getClass().isAssignableFrom(Long.class)) {
-            return entityProperty.getValueAsLong();
-        }
-        if (type.getClass().isAssignableFrom(String.class)) {
-            return entityProperty.getValueAsString();
-        }
-        if (type.getClass().isAssignableFrom(UUID.class)) {
-            return entityProperty.getValueAsUUID();
-        }
-        throw new KunderaException("Unknown type " + type);
+    public static DynamicEntity createDynamicEntity(String id) {
+        AzureTableKey key = new AzureTableKey(id);
+        return new DynamicEntity(key.getPartitionKey(), key.getRowKey());
     }
 
     /**
@@ -105,20 +62,19 @@ public class AzureTableUtils {
     }
 
     /**
-     * Serialize an object into an {@link com.microsoft.windowsazure.services.table.client.EntityProperty}.
+     * Serialize an object into a byte[].
      *
      * @param obj object to be serialized.
      *
-     * @return an instance of {@link com.microsoft.windowsazure.services.table.client.EntityProperty} for the given object.
+     * @return a byte[] containing the serialization.
      *
      * @throws java.io.IOException
-     * @see com.microsoft.windowsazure.services.table.client.EntityProperty
      */
-    public static EntityProperty serialize(Object obj) throws IOException {
+    public static byte[] serialize(Object obj) throws IOException {
         ByteArrayOutputStream b = new ByteArrayOutputStream();
         ObjectOutputStream o = new ObjectOutputStream(b);
         o.writeObject(obj);
-        return new EntityProperty(b.toByteArray());
+        return b.toByteArray();
     }
 
     /**
@@ -137,5 +93,84 @@ public class AzureTableUtils {
         ByteArrayInputStream b = new ByteArrayInputStream(bytes);
         ObjectInputStream o = new ObjectInputStream(b);
         return o.readObject();
+    }
+
+    /**
+     * Generate an instance of {@link com.microsoft.windowsazure.services.table.client.EntityProperty}.
+     *
+     * @param value the value to be wrapped into an {@link com.microsoft.windowsazure.services.table.client.EntityProperty}
+     *
+     * @return an instance of {@link com.microsoft.windowsazure.services.table.client.EntityProperty} for the given object.
+     *
+     * @throws com.impetus.kundera.KunderaException if type is not supported by AzureTable.
+     */
+    public static EntityProperty getEntityProperty(Object value) {
+        if (value instanceof String) {
+            return new EntityProperty((String) value);
+        }
+        if (value instanceof Double) {
+            return new EntityProperty((Double) value);
+        }
+        if (value instanceof Integer) {
+            return new EntityProperty((Integer) value);
+        }
+        if (value instanceof Long) {
+            return new EntityProperty((Long) value);
+        }
+        if (value instanceof Boolean) {
+            return new EntityProperty((Boolean) value);
+        }
+        if (value instanceof byte[]) {
+            return new EntityProperty((byte[]) value);
+        }
+        if (value instanceof Byte[]) {
+            return new EntityProperty((Byte[]) value);
+        }
+        if (value instanceof Date) {
+            return new EntityProperty((Date) value);
+        }
+        if (value instanceof UUID) {
+            return new EntityProperty((UUID) value);
+        }
+        throw new KunderaException("Unsupported type " + value.getClass().getCanonicalName());
+    }
+
+    /**
+     * Retrieve the property value from an {@link com.microsoft.windowsazure.services.table.client.EntityProperty}.
+     *
+     * @param entityProperty the property container
+     * @param type           type class of the property to be retrieved
+     *
+     * @return the retrieved property
+     */
+    public static Object getPropertyValue(EntityProperty entityProperty, Class<?> type) {
+        if (type.getClass().isAssignableFrom(String.class)) {
+            return entityProperty.getValueAsString();
+        }
+        if (type.getClass().isAssignableFrom(Double.class)) {
+            return entityProperty.getValueAsDouble();
+        }
+        if (type.getClass().isAssignableFrom(Integer.class)) {
+            return entityProperty.getValueAsInteger();
+        }
+        if (type.getClass().isAssignableFrom(Long.class)) {
+            return entityProperty.getValueAsLong();
+        }
+        if (type.getClass().isAssignableFrom(Boolean.class)) {
+            return entityProperty.getValueAsBoolean();
+        }
+        if (type.getClass().isAssignableFrom(byte[].class)) {
+            return entityProperty.getValueAsByteArray();
+        }
+        if (type.getClass().isAssignableFrom(Byte[].class)) {
+            return entityProperty.getValueAsByteObjectArray();
+        }
+        if (type.getClass().isAssignableFrom(Date.class)) {
+            return entityProperty.getValueAsDate();
+        }
+        if (type.getClass().isAssignableFrom(UUID.class)) {
+            return entityProperty.getValueAsUUID();
+        }
+        throw new KunderaException("Unknown type " + type);
     }
 }
