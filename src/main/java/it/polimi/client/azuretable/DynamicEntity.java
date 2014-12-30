@@ -37,6 +37,10 @@ public class DynamicEntity extends DynamicTableEntity {
         super.setProperties(properties);
     }
 
+    public EntityProperty getProperty(String name) {
+        return this.properties.get(name);
+    }
+
     @Override
     public String toString() {
         String key = partitionKey + "(" + rowKey + ")";

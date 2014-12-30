@@ -445,8 +445,24 @@ public class AzureTableClient extends ClientBase implements Client<AzureTableQue
      */
     @Override
     public <E> List<E> getColumnsById(String schemaName, String tableName, String pKeyColumnName, String columnName, Object pKeyColumnValue, Class columnJavaType) {
-        //TODO
-        return null;
+        logger.debug("schemaName = [" + schemaName + "], tableName = [" + tableName + "], pKeyColumnName = [" + pKeyColumnName + "], columnName = [" + columnName + "], pKeyColumnValue = [" + pKeyColumnValue + "], columnJavaType = [" + columnJavaType + "]");
+
+        // pass through AzureTableKey just for validation
+        AzureTableKey sourceKey = new AzureTableKey(pKeyColumnValue.toString());
+        TableQuery<DynamicEntity> query = generateRelationQuery(tableName, pKeyColumnName, sourceKey.toString());
+
+        List<E> results = new ArrayList<>();
+        logger.debug(columnName + " for " + pKeyColumnName + "[" + pKeyColumnValue + "]:");
+        for (DynamicEntity entity : tableClient.execute(query)) {
+            // EntityProperty property = entity.getProperty(columnName);
+            // AzureTableKey entityKey = new AzureTableKey(property.getValueAsString());
+            // String key = entityKey.toString()
+
+            // columnName should be a string representation of AzureTableKey
+            logger.debug("\t" + entity.getProperty(columnName).getValueAsString());
+            results.add((E) entity.getProperty(columnName).getValueAsString());
+        }
+        return results;
     }
 
     /* (non-Javadoc)
@@ -461,8 +477,24 @@ public class AzureTableClient extends ClientBase implements Client<AzureTableQue
      */
     @Override
     public Object[] findIdsByColumn(String schemaName, String tableName, String pKeyName, String columnName, Object columnValue, Class entityClazz) {
-        //TODO
-        return null;
+        logger.debug("schemaName = [" + schemaName + "], tableName = [" + tableName + "], pKeyName = [" + pKeyName + "], columnName = [" + columnName + "], columnValue = [" + columnValue + "], entityClazz = [" + entityClazz + "]");
+
+        // pass through AzureTableKey just for validation
+        AzureTableKey sourceKey = new AzureTableKey(columnValue.toString());
+        TableQuery<DynamicEntity> query = generateRelationQuery(tableName, columnName, sourceKey.toString());
+
+        List<Object> results = new ArrayList<>();
+        logger.debug(pKeyName + " for " + columnName + "[" + columnValue + "]:");
+        for (DynamicEntity entity : tableClient.execute(query)) {
+            // EntityProperty property = entity.getProperty(pKeyName);
+            // AzureTableKey entityKey = new AzureTableKey(property.getValueAsString());
+            // String key = entityKey.toString()
+
+            // pKeyName should be a string representation of AzureTableKey
+            logger.debug("\t" + entity.getProperty(pKeyName).getValueAsString());
+            results.add(entity.getProperty(pKeyName).getValueAsString());
+        }
+        return results.toArray();
     }
 
     /*---------------------------------------------------------------------------------*/
@@ -495,7 +527,20 @@ public class AzureTableClient extends ClientBase implements Client<AzureTableQue
      */
     @Override
     public void deleteByColumn(String schemaName, String tableName, String columnName, Object columnValue) {
-        //TODO
+        logger.debug("schemaName = [" + schemaName + "], tableName = [" + tableName + "], columnName = [" + columnName + "], columnValue = [" + columnValue + "]");
+
+        // pass through AzureTableKey just for validation
+        AzureTableKey sourceKey = new AzureTableKey(columnValue.toString());
+        TableQuery<DynamicEntity> query = generateRelationQuery(tableName, columnName, sourceKey.toString());
+
+        for (DynamicEntity entity : tableClient.execute(query)) {
+            try {
+                TableOperation deleteOperation = TableOperation.delete(entity);
+                tableClient.execute(tableName, deleteOperation);
+            } catch (StorageException e) {
+                throw new KunderaException("A problem occurred while deleting the entity: ", e);
+            }
+        }
     }
 
     /*---------------------------------------------------------------------------------*/
