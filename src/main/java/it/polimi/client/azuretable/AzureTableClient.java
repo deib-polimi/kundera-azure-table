@@ -272,8 +272,8 @@ public class AzureTableClient extends ClientBase implements Client<AzureTableQue
     }
 
     private DynamicEntity get(String table, AzureTableKey key) {
-        TableOperation retrieveOperation = TableOperation.retrieve(key.getPartitionKey(), key.getRowKey(), DynamicEntity.class);
         try {
+            TableOperation retrieveOperation = TableOperation.retrieve(key.getPartitionKey(), key.getRowKey(), DynamicEntity.class);
             DynamicEntity tableEntity = tableClient.execute(table, retrieveOperation).getResultAsType();
             if (tableEntity == null) {
                 logger.info("Not found {table = [" + table + "], key = [" + key.toString() + "]}");
