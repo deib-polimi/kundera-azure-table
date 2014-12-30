@@ -55,6 +55,45 @@ public class AzureTableUtils {
     }
 
     /**
+     * Retrieve the property value from an {@link com.microsoft.windowsazure.services.table.client.EntityProperty}.
+     *
+     * @param entityProperty the property container
+     * @param type           type class of the property to be retrieved
+     *
+     * @return the retrieved property
+     */
+    public static Object getPropertyValue(EntityProperty entityProperty, Class<?> type) {
+        if (type.getClass().isAssignableFrom(Boolean.class)) {
+            return entityProperty.getValueAsBoolean();
+        }
+        if (type.getClass().isAssignableFrom(byte[].class)) {
+            return entityProperty.getValueAsByteArray();
+        }
+        if (type.getClass().isAssignableFrom(Byte[].class)) {
+            return entityProperty.getValueAsByteObjectArray();
+        }
+        if (type.getClass().isAssignableFrom(Date.class)) {
+            return entityProperty.getValueAsDate();
+        }
+        if (type.getClass().isAssignableFrom(Double.class)) {
+            return entityProperty.getValueAsDouble();
+        }
+        if (type.getClass().isAssignableFrom(Integer.class)) {
+            return entityProperty.getValueAsInteger();
+        }
+        if (type.getClass().isAssignableFrom(Long.class)) {
+            return entityProperty.getValueAsLong();
+        }
+        if (type.getClass().isAssignableFrom(String.class)) {
+            return entityProperty.getValueAsString();
+        }
+        if (type.getClass().isAssignableFrom(UUID.class)) {
+            return entityProperty.getValueAsUUID();
+        }
+        throw new KunderaException("Unknown type " + type);
+    }
+
+    /**
      * An helper method to set a property to an instance of {@link it.polimi.client.azuretable.DynamicEntity}.
      *
      * @param tableEntity   injected entity

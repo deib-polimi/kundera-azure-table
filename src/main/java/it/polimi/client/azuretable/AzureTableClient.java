@@ -277,28 +277,30 @@ public class AzureTableClient extends ClientBase implements Client<AzureTableQue
     private void initializeAttribute(DynamicEntity tableEntity, Object entity, Attribute attribute) {
         String jpaColumnName = ((AbstractAttribute) attribute).getJPAColumnName();
         EntityProperty entityProperty = tableEntity.getProperties().get(jpaColumnName);
-        Object fieldValue = null;
 
-        // TODO understand when to deserialize
-        // probably write a util that do instance of and call
-        // entityProperty.getValueAsX()
-        /*
-         * if (e instanceof Blob) {
-         *    try {
-         *        fieldValue = AzureTableUtils.deserialize(fieldValue);
-         *    } catch (ClassNotFoundException | IOException e) {
-         *        throw new KunderaException("Some errors occurred while deserializing the object: ", e);
-         *    }
-         * } else
-         */
-        if (((Field) attribute.getJavaMember()).getType().isEnum()) {
+        Object fieldValue;
+        Class<?> type = ((Field) attribute.getJavaMember()).getType();
+        if (type.isEnum()) {
             EnumAccessor accessor = new EnumAccessor();
             fieldValue = accessor.fromString(((AbstractAttribute) attribute).getBindableJavaType(), entityProperty.getValueAsString());
+        } else if (isCollectionOrMap(type)) {
+            try {
+                fieldValue = AzureTableUtils.deserialize(entityProperty);
+            } catch (ClassNotFoundException | IOException e) {
+                throw new KunderaException("Some errors occurred while deserializing the object: ", e);
+            }
+        } else {
+            fieldValue = AzureTableUtils.getPropertyValue(entityProperty, type);
         }
+
         if (jpaColumnName != null && fieldValue != null) {
             logger.debug("jpaColumnName = [" + jpaColumnName + "], fieldValue = [" + fieldValue + "]");
             PropertyAccessorHelper.set(entity, (Field) attribute.getJavaMember(), fieldValue);
         }
+    }
+
+    private boolean isCollectionOrMap(Class<?> type) {
+        return type.getClass().isAssignableFrom(Collection.class) || type.getClass().isAssignableFrom(Map.class);
     }
 
     private void initializeEmbeddedAttribute(DynamicEntity tableEntity, Object entity, Attribute attribute, MetamodelImpl metamodel) throws IllegalAccessException, InstantiationException {
