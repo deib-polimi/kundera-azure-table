@@ -62,6 +62,7 @@ public class AzureTableClientFactory extends GenericClientFactory {
             accountKey = (String) properties.get(PersistenceProperties.KUNDERA_PASSWORD);
         }
 
+        // TODO maybe add possibility to specify directly the Host and connect using it as storageURI
         if (accountName == null) {
             throw new ClientLoaderException("Configuration error, missing storage account name as kundera.username in persistence.xml");
         }

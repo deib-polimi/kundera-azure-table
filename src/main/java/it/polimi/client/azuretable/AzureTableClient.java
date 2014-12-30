@@ -11,6 +11,7 @@ import com.impetus.kundera.metadata.KunderaMetadataManager;
 import com.impetus.kundera.metadata.model.ClientMetadata;
 import com.impetus.kundera.metadata.model.EntityMetadata;
 import com.impetus.kundera.metadata.model.MetamodelImpl;
+import com.impetus.kundera.metadata.model.Relation;
 import com.impetus.kundera.metadata.model.attributes.AbstractAttribute;
 import com.impetus.kundera.metadata.model.type.AbstractManagedType;
 import com.impetus.kundera.persistence.EntityManagerFactoryImpl.KunderaMetadata;
@@ -19,6 +20,7 @@ import com.impetus.kundera.persistence.context.jointable.JoinTableData;
 import com.impetus.kundera.property.PropertyAccessorHelper;
 import com.impetus.kundera.property.accessor.EnumAccessor;
 import com.microsoft.windowsazure.services.core.storage.StorageException;
+import com.microsoft.windowsazure.services.table.client.CloudTable;
 import com.microsoft.windowsazure.services.table.client.CloudTableClient;
 import com.microsoft.windowsazure.services.table.client.EntityProperty;
 import com.microsoft.windowsazure.services.table.client.TableOperation;
@@ -30,6 +32,7 @@ import javax.persistence.metamodel.Attribute;
 import javax.persistence.metamodel.EntityType;
 import java.io.IOException;
 import java.lang.reflect.Field;
+import java.net.URISyntaxException;
 import java.util.*;
 
 /**
@@ -81,11 +84,14 @@ public class AzureTableClient extends ClientBase implements Client<AzureTableQue
 
     @Override
     public Object generate() {
-        // TODO partition key maybe the same for every row in the same table ?
-        // problem: if is user  to set it, no problem, but here is impossible to assign
-        // a partition key per table since is not available the table here
-        String partitionKey = UUID.randomUUID().toString();
+        /*
+         * TODO partition key maybe the same for every row in the same table ?
+         * problem: if is user  to set it, no problem, but here is impossible to assign
+         * a partition key per table since is not available the table here
+         */
+        String partitionKey = "DEFAULT";
         String rowKey = UUID.randomUUID().toString();
+        // return string representation since Kundera does not support "external" data types
         return AzureTableKey.asString(partitionKey, rowKey);
     }
 
@@ -170,13 +176,21 @@ public class AzureTableClient extends ClientBase implements Client<AzureTableQue
     }
 
     private void handleRelations(DynamicEntity tableEntity, EntityMetadata entityMetadata, List<RelationHolder> rlHolders) {
-        /*
-         * TODO
-         * primary key for and entity is the pair (partitionKey, rowKey)
-         *
-         * TableOperation retrieveOperation = TableOperation.retrieve(partitionKey, rowKey, DynamicEntity.class);
-         * CustomerEntity specificEntity = cloudTable.execute(retrieveOperation).getResultAsType();
-         */
+        if (rlHolders != null && !rlHolders.isEmpty()) {
+            for (RelationHolder rh : rlHolders) {
+                String jpaColumnName = rh.getRelationName();
+                String fieldName = entityMetadata.getFieldName(jpaColumnName);
+                Relation relation = entityMetadata.getRelation(fieldName);
+                Object targetId = rh.getRelationValue();
+
+                if (relation != null && jpaColumnName != null && targetId != null) {
+                    // pass through AzureTableKey just for validation
+                    AzureTableKey targetKey = new AzureTableKey(targetId.toString());
+                    logger.debug("field = [" + fieldName + "], jpaColumnName = [" + jpaColumnName + "], targetKey = [" + targetKey.toString() + "]");
+                    AzureTableUtils.setPropertyHelper(tableEntity, jpaColumnName, targetKey.toString());
+                }
+            }
+        }
     }
 
     private void handleDiscriminatorColumn(DynamicEntity tableEntity, EntityType entityType) {
@@ -189,7 +203,8 @@ public class AzureTableClient extends ClientBase implements Client<AzureTableQue
         }
     }
 
-    /*
+    /* (non-Javadoc)
+     *
      * persist join table for ManyToMany
      *
      * for example:
@@ -198,19 +213,47 @@ public class AzureTableClient extends ClientBase implements Client<AzureTableQue
      *  -----------------------------------------------------------------------
      *  | EMPLOYEE_ID (joinColumnName)  |  PROJECT_ID (inverseJoinColumnName)  |
      *  -----------------------------------------------------------------------
-     *  |          id (owner)           |             id (child)               |
+     *  |          key (owner)          |             key (child)              |
      *  -----------------------------------------------------------------------
+     *
+     *  note: owner and child are string representations of AzureTableKey
      */
     @Override
     public void persistJoinTable(JoinTableData joinTableData) {
-        //TODO
+        String joinTableName = joinTableData.getJoinTableName();
+        String joinColumnName = joinTableData.getJoinColumnName();
+        String inverseJoinColumnName = joinTableData.getInverseJoinColumnName();
+        Map<Object, Set<Object>> joinTableRecords = joinTableData.getJoinTableRecords();
+
+        for (Object owner : joinTableRecords.keySet()) {
+            Set<Object> children = joinTableRecords.get(owner);
+            for (Object child : children) {
+                // partition key is joinTableName, row key is random generated
+                DynamicEntity tableEntity = new DynamicEntity(joinTableName, UUID.randomUUID().toString());
+                AzureTableUtils.setPropertyHelper(tableEntity, joinColumnName, owner);
+                AzureTableUtils.setPropertyHelper(tableEntity, inverseJoinColumnName, child);
+
+                try {
+                    CloudTable joinTable = tableClient.getTableReference(joinTableName);
+                    if (joinTable.createIfNotExist()) {
+                        logger.info("Join Table " + joinTableName + " has been created");
+                    }
+                    TableOperation insertOperation = TableOperation.insertOrReplace(tableEntity);
+                    tableClient.execute(joinTableName, insertOperation);
+                    logger.info(tableEntity.toString());
+                } catch (URISyntaxException | StorageException e) {
+                    throw new KunderaException("Some error occurred while persisting join table entry: ", e);
+                }
+            }
+        }
     }
 
     /*---------------------------------------------------------------------------------*/
     /*------------------------------ FIND OPERATIONS ----------------------------------*/
     /*---------------------------------------------------------------------------------*/
 
-    /*
+    /* (non-Javadoc)
+     *
      * it's called to find detached entities
      */
     @Override
@@ -322,10 +365,18 @@ public class AzureTableClient extends ClientBase implements Client<AzureTableQue
     }
 
     private void initializeRelation(DynamicEntity tableEntity, Attribute attribute, Map<String, Object> relationMap) {
-        // TODO Auto-generated method stub
+        String jpaColumnName = ((AbstractAttribute) attribute).getJPAColumnName();
+        EntityProperty entityProperty = tableEntity.getProperties().get(jpaColumnName);
+        Object fieldValue = entityProperty.getValueAsString();
+        logger.debug("jpaColumnName = [" + jpaColumnName + "], fieldValue = [" + fieldValue + "]");
+
+        if (jpaColumnName != null && fieldValue != null) {
+            relationMap.put(jpaColumnName, fieldValue);
+        }
     }
 
-    /*
+    /* (non-Javadoc)
+     *
      * Implicitly it gets invoked, when kundera.indexer.class or lucene.home.dir is configured.
      * Means to use custom indexer for secondary indexes.
      * This method can also be very helpful to find rows for all primary keys! as with
@@ -345,7 +396,8 @@ public class AzureTableClient extends ClientBase implements Client<AzureTableQue
         return results;
     }
 
-    /*
+    /* (non-Javadoc)
+     *
      * It can be ignored, It was in place to purely support Cassandra's super columns.
      */
     @Override
@@ -353,7 +405,8 @@ public class AzureTableClient extends ClientBase implements Client<AzureTableQue
         throw new UnsupportedOperationException("Not supported in " + this.getClass().getSimpleName());
     }
 
-    /*
+    /* (non-Javadoc)
+     *
      * used to retrieve relation for OneToMany (ManyToOne inverse relation),
      * is supposed to retrieve the initialized objects.
      *
@@ -367,7 +420,8 @@ public class AzureTableClient extends ClientBase implements Client<AzureTableQue
         return null;
     }
 
-    /*
+    /* (non-Javadoc)
+     *
      * used to retrieve owner-side relation for ManyToMany,
      * is supposed to retrieve the objects id.
      *
@@ -382,7 +436,8 @@ public class AzureTableClient extends ClientBase implements Client<AzureTableQue
         return null;
     }
 
-    /*
+    /* (non-Javadoc)
+     *
      * used to retrieve target-side relation for ManyToMany,
      * is supposed to retrieve the objects id.
      *
@@ -416,7 +471,8 @@ public class AzureTableClient extends ClientBase implements Client<AzureTableQue
         }
     }
 
-    /*
+    /* (non-Javadoc)
+     *
      * used to delete relation for ManyToMany
      *
      * for example:
