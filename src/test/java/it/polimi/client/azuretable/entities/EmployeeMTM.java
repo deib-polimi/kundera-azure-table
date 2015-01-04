@@ -30,7 +30,7 @@ public class EmployeeMTM {
     private Long salary;
 
     @ManyToMany(cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    @JoinTable(name = "EMPLOYEE_PROJECT",
+    @JoinTable(name = "EMPLOYEEPROJECT",
             joinColumns = {@JoinColumn(name = "EMPLOYEE_ID")},
             inverseJoinColumns = {@JoinColumn(name = "PROJECT_ID")})
     private List<ProjectMTM> projects;

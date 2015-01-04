@@ -1,7 +1,10 @@
 package it.polimi.client.azuretable.tests;
 
 import com.impetus.kundera.KunderaException;
-import it.polimi.client.azuretable.entities.*;
+import it.polimi.client.azuretable.entities.Phone;
+import it.polimi.client.azuretable.entities.PhoneInvalid1;
+import it.polimi.client.azuretable.entities.PhoneInvalid2;
+import it.polimi.client.azuretable.entities.PhoneString;
 import org.junit.Assert;
 import org.junit.Test;
 

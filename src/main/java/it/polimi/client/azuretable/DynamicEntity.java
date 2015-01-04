@@ -38,6 +38,10 @@ public class DynamicEntity extends DynamicTableEntity {
     }
 
     public EntityProperty getProperty(String name) {
+        if (this.properties.size() == 0) {
+            // case DynamicEntity retrieved from query
+            this.properties = getProperties();
+        }
         return this.properties.get(name);
     }
 
@@ -46,8 +50,8 @@ public class DynamicEntity extends DynamicTableEntity {
         String key = partitionKey + "(" + rowKey + ")";
         String properties = "";
         for (Map.Entry<String, EntityProperty> entry : getProperties().entrySet()) {
-            properties += entry.getKey() + " = " + entry.getValue().toString() + "\n";
+            properties += "\t" + entry.getKey() + " = " + entry.getValue().getValueAsString() + "\n";
         }
-        return "<" + this.getClass().getSimpleName() + "[" + key + "]:\n" + properties + ">";
+        return "<" + this.getClass().getSimpleName() + "[" + key + "]:\n" + properties + ">\n";
     }
 }

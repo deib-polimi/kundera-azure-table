@@ -71,7 +71,7 @@ public class AzureTableClientFactory extends GenericClientFactory {
                 if (devProxy != null) {
                     return "UseDevelopmentStorage=true;DevelopmentStorageProxyUri=" + devProxy;
                 }
-                return "UseDevelopmentStorage=true";
+                return "UseDevelopmentStorage=true;DevelopmentStorageProxyUri=http://127.0.0.1;";
             }
             if (useHttp(tableProperties)) {
                 protocol = "http";

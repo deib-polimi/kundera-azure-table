@@ -21,9 +21,7 @@ public class AzureTableUtils {
      *
      * @param entityMetadata metadata from Kundera ({@link com.impetus.kundera.persistence.EntityManagerFactoryImpl.KunderaMetadata}).
      * @param id             entity id.
-     *
      * @return a fresh new  {@link it.polimi.client.azuretable.DynamicEntity}
-     *
      * @throws com.impetus.kundera.KunderaException if id is not of type {@link String}.
      * @see it.polimi.client.azuretable.DynamicEntity
      */
@@ -39,9 +37,7 @@ public class AzureTableUtils {
      * Generate a {@link it.polimi.client.azuretable.DynamicEntity}.
      *
      * @param id string representation of {@link it.polimi.client.azuretable.AzureTableKey}.
-     *
      * @return a fresh new  {@link it.polimi.client.azuretable.DynamicEntity}
-     *
      * @see it.polimi.client.azuretable.AzureTableKey
      * @see it.polimi.client.azuretable.DynamicEntity
      */
@@ -65,9 +61,7 @@ public class AzureTableUtils {
      * Serialize an object into a byte[].
      *
      * @param obj object to be serialized.
-     *
      * @return a byte[] containing the serialization.
-     *
      * @throws java.io.IOException
      */
     public static byte[] serialize(Object obj) throws IOException {
@@ -81,9 +75,7 @@ public class AzureTableUtils {
      * Deserialize an {@link com.microsoft.windowsazure.services.table.client.EntityProperty}.
      *
      * @param property a datastore {@link com.microsoft.windowsazure.services.table.client.EntityProperty}.
-     *
      * @return the deserialized object.
-     *
      * @throws java.io.IOException
      * @throws ClassNotFoundException
      * @see com.microsoft.windowsazure.services.table.client.EntityProperty
@@ -99,9 +91,7 @@ public class AzureTableUtils {
      * Generate an instance of {@link com.microsoft.windowsazure.services.table.client.EntityProperty}.
      *
      * @param value the value to be wrapped into an {@link com.microsoft.windowsazure.services.table.client.EntityProperty}
-     *
      * @return an instance of {@link com.microsoft.windowsazure.services.table.client.EntityProperty} for the given object.
-     *
      * @throws com.impetus.kundera.KunderaException if type is not supported by AzureTable.
      */
     public static EntityProperty getEntityProperty(Object value) {
@@ -140,35 +130,34 @@ public class AzureTableUtils {
      *
      * @param entityProperty the property container
      * @param type           type class of the property to be retrieved
-     *
      * @return the retrieved property
      */
     public static Object getPropertyValue(EntityProperty entityProperty, Class<?> type) {
-        if (type.getClass().isAssignableFrom(String.class)) {
+        if (String.class.equals(type)) {
             return entityProperty.getValueAsString();
         }
-        if (type.getClass().isAssignableFrom(Double.class)) {
+        if (Double.class.equals(type)) {
             return entityProperty.getValueAsDouble();
         }
-        if (type.getClass().isAssignableFrom(Integer.class)) {
+        if (Integer.class.equals(type)) {
             return entityProperty.getValueAsInteger();
         }
-        if (type.getClass().isAssignableFrom(Long.class)) {
+        if (Long.class.equals(type)) {
             return entityProperty.getValueAsLong();
         }
-        if (type.getClass().isAssignableFrom(Boolean.class)) {
+        if (Boolean.class.equals(type)) {
             return entityProperty.getValueAsBoolean();
         }
-        if (type.getClass().isAssignableFrom(byte[].class)) {
+        if (byte[].class.equals(type)) {
             return entityProperty.getValueAsByteArray();
         }
-        if (type.getClass().isAssignableFrom(Byte[].class)) {
+        if (Byte[].class.equals(type)) {
             return entityProperty.getValueAsByteObjectArray();
         }
-        if (type.getClass().isAssignableFrom(Date.class)) {
+        if (Date.class.equals(type)) {
             return entityProperty.getValueAsDate();
         }
-        if (type.getClass().isAssignableFrom(UUID.class)) {
+        if (UUID.class.equals(type)) {
             return entityProperty.getValueAsUUID();
         }
         throw new KunderaException("Unknown type " + type);

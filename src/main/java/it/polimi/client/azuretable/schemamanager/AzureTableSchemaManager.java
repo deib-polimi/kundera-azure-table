@@ -91,7 +91,13 @@ public class AzureTableSchemaManager extends AbstractSchemaManager implements Sc
 
     @Override
     protected boolean initiateClient() {
-        String storageConnectionString = "DefaultEndpointsProtocol=http;AccountName=" + this.userName + ";AccountKey=" + this.password;
+        String storageConnectionString;
+        if (this.userName == null || this.password == null) {
+            storageConnectionString = "UseDevelopmentStorage=true;DevelopmentStorageProxyUri=http://127.0.0.1;";
+        } else {
+            storageConnectionString = "DefaultEndpointsProtocol=http;AccountName=" + this.userName + ";AccountKey=" + this.password;
+        }
+
         try {
             CloudStorageAccount storageAccount = CloudStorageAccount.parse(storageConnectionString);
             logger.info("Connected to Tables with connection string: " + storageConnectionString);

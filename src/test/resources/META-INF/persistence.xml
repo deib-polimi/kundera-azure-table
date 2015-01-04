@@ -2,7 +2,7 @@
 <persistence xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
              version="1.0" xmlns="http://java.sun.com/xml/ns/persistence"
              xsi:schemaLocation="http://java.sun.com/xml/ns/persistence http://java.sun.com/xml/ns/persistence/persistence_1_0.xsd">
-    <persistence-unit name="pu">
+    <persistence-unit name="pu-2">
         <provider>com.impetus.kundera.KunderaPersistence</provider>
         <class>it.polimi.client.azuretable.entities.Address</class>
         <class>it.polimi.client.azuretable.entities.AddressCollection</class>
@@ -35,7 +35,7 @@
         </properties>
     </persistence-unit>
 
-    <persistence-unit name="dev-pu">
+    <persistence-unit name="pu">
         <provider>com.impetus.kundera.KunderaPersistence</provider>
         <class>it.polimi.client.azuretable.entities.Address</class>
         <class>it.polimi.client.azuretable.entities.AddressCollection</class>
