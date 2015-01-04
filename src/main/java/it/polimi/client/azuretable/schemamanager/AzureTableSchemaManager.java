@@ -135,7 +135,7 @@ public class AzureTableSchemaManager extends AbstractSchemaManager implements Sc
             try {
                 CloudTable table = tableClient.getTableReference(info.getTableName());
                 table.createIfNotExist();
-                logger.info("table " + info.getTableName() + " created");
+                logger.debug("table " + info.getTableName() + " created");
             } catch (URISyntaxException | StorageException e) {
                 throw new KunderaException("Some error occurred while creating table " + info.getTableName(), e);
             }
@@ -159,7 +159,7 @@ public class AzureTableSchemaManager extends AbstractSchemaManager implements Sc
         for (String table : tableClient.listTables()) {
             try {
                 tableClient.getTableReference(table).deleteIfExists();
-                logger.info("table " + table + " dropped");
+                logger.debug("table " + table + " dropped");
             } catch (URISyntaxException | StorageException e) {
                 throw new KunderaException("Some error occurred while dropping schema", e);
             }

@@ -1,6 +1,7 @@
 package it.polimi.client.azuretable.tests;
 
 import com.impetus.kundera.KunderaException;
+import it.polimi.client.azuretable.AzureTableKey;
 import it.polimi.client.azuretable.entities.Phone;
 import it.polimi.client.azuretable.entities.PhoneInvalid1;
 import it.polimi.client.azuretable.entities.PhoneInvalid2;
@@ -53,19 +54,20 @@ public class IdsTest extends TestBase {
     @Test
     public void userStringIdTest() {
         print("user string id");
+        String id = AzureTableKey.asString("phone", "1");
         PhoneString phone = new PhoneString();
         phone.setNumber(123456789L);
-        phone.setId("phone 1");
+        phone.setId(id);
         em.persist(phone);
         Assert.assertNotNull(phone.getId());
-        Assert.assertEquals("phone 1", phone.getId());
+        Assert.assertEquals(id, phone.getId());
 
         clear();
 
         print("read");
-        PhoneString foundPhone = em.find(PhoneString.class, "phone 1");
+        PhoneString foundPhone = em.find(PhoneString.class, id);
         Assert.assertNotNull(foundPhone);
-        Assert.assertEquals("phone 1", foundPhone.getId());
+        Assert.assertEquals(id, foundPhone.getId());
         Assert.assertEquals((Long) 123456789L, foundPhone.getNumber());
 
         print("update");
@@ -75,14 +77,14 @@ public class IdsTest extends TestBase {
         clear();
 
         TypedQuery<PhoneString> query = em.createQuery("SELECT p FROM PhoneString p WHERE p.id = :id", PhoneString.class);
-        foundPhone = query.setParameter("id", "phone 1").getSingleResult();
+        foundPhone = query.setParameter("id", id).getSingleResult();
         Assert.assertNotNull(foundPhone);
-        Assert.assertEquals("phone 1", foundPhone.getId());
+        Assert.assertEquals(id, foundPhone.getId());
         Assert.assertEquals((Long) 987654321L, foundPhone.getNumber());
 
         print("delete");
         em.remove(foundPhone);
-        foundPhone = em.find(PhoneString.class, "phone 1");
+        foundPhone = em.find(PhoneString.class, id);
         Assert.assertNull(foundPhone);
     }
 
