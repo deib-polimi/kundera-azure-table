@@ -93,6 +93,7 @@ public class AzureTableSchemaManager extends AbstractSchemaManager implements Sc
     protected boolean initiateClient() {
         String storageConnectionString;
         if (this.userName == null || this.password == null) {
+            // use storage emulator
             storageConnectionString = "UseDevelopmentStorage=true;DevelopmentStorageProxyUri=http://127.0.0.1;";
         } else {
             storageConnectionString = "DefaultEndpointsProtocol=http;AccountName=" + this.userName + ";AccountKey=" + this.password;
@@ -113,7 +114,7 @@ public class AzureTableSchemaManager extends AbstractSchemaManager implements Sc
      */
     @Override
     protected void validate(List<TableInfo> tablesInfo) {
-        throw new UnsupportedOperationException("DDL validate is unsupported for Table");
+        throw new UnsupportedOperationException("schema validation is not supported for Azure Table");
     }
 
     /*
@@ -121,7 +122,7 @@ public class AzureTableSchemaManager extends AbstractSchemaManager implements Sc
      */
     @Override
     protected void update(List<TableInfo> tableInfo) {
-        throw new UnsupportedOperationException("DDL validate is unsupported for Table");
+        throw new UnsupportedOperationException("schema update is not supported for Azure Table");
     }
 
     /*
@@ -134,6 +135,7 @@ public class AzureTableSchemaManager extends AbstractSchemaManager implements Sc
             try {
                 CloudTable table = tableClient.getTableReference(info.getTableName());
                 table.createIfNotExist();
+                logger.info("table " + info.getTableName() + " created");
             } catch (URISyntaxException | StorageException e) {
                 throw new KunderaException("Some error occurred while creating table " + info.getTableName(), e);
             }
@@ -157,6 +159,7 @@ public class AzureTableSchemaManager extends AbstractSchemaManager implements Sc
         for (String table : tableClient.listTables()) {
             try {
                 tableClient.getTableReference(table).deleteIfExists();
+                logger.info("table " + table + " dropped");
             } catch (URISyntaxException | StorageException e) {
                 throw new KunderaException("Some error occurred while dropping schema", e);
             }

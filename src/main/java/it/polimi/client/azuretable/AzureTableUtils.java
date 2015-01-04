@@ -62,11 +62,11 @@ public class AzureTableUtils {
     }
 
     /**
-     * Serialize an object into a byte[].
+     * Serialize an object into a {@code byte[]}.
      *
      * @param obj object to be serialized.
      *
-     * @return a byte[] containing the serialization.
+     * @return a {@code byte[]} containing the serialization.
      *
      * @throws java.io.IOException
      */

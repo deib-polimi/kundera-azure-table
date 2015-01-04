@@ -9,10 +9,10 @@
                         optional, if present and value is true storage emulator is used.
                         note: using dev server, kundera.username and kundera.password in persistence xml are ignored
                     -->
-                    <property name="table.devserver" value="true"></property>
+                    <property name="table.emulator" value="true"></property>
                     <!--
                         optional, if using storage emulator set the value for a http proxy
-                        <property name="table.devserver.proxy" value="http://myProxyUri"></property>
+                        <property name="table.emulator.proxy" value="http://myProxyUri"></property>
                     -->
 
                     <!--

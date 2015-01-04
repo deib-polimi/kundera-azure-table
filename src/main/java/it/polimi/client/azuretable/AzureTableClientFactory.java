@@ -54,11 +54,11 @@ public class AzureTableClientFactory extends GenericClientFactory {
         String storageConnectionString = buildConnectionString();
         try {
             storageAccount = CloudStorageAccount.parse(storageConnectionString);
-            logger.info("Connected to Tables with connection string: " + storageConnectionString);
+            logger.info("Connected to Azure Tables with connection string: " + storageConnectionString);
             tableClient = storageAccount.createCloudTableClient();
             return tableClient;
         } catch (URISyntaxException | InvalidKeyException e) {
-            throw new ClientLoaderException("Unable to connect to Tables with connection string: " + storageConnectionString, e);
+            throw new ClientLoaderException("Unable to connect to Azure Tables with connection string: " + storageConnectionString, e);
         }
     }
 
@@ -66,12 +66,12 @@ public class AzureTableClientFactory extends GenericClientFactory {
         String protocol = "https";
         Properties tableProperties = getClientSpecificProperties();
         if (tableProperties != null) {
-            if (useDevServer(tableProperties)) {
-                String devProxy = parseDevProxy(tableProperties);
+            if (userStorageEmulator(tableProperties)) {
+                String devProxy = parseEmulatorProxy(tableProperties);
                 if (devProxy != null) {
                     return "UseDevelopmentStorage=true;DevelopmentStorageProxyUri=" + devProxy;
                 }
-                return "UseDevelopmentStorage=true;DevelopmentStorageProxyUri=http://127.0.0.1;";
+                return "UseDevelopmentStorage=true;DevelopmentStorageProxyUri=http://127.0.0.1";
             }
             if (useHttp(tableProperties)) {
                 protocol = "http";
@@ -147,20 +147,20 @@ public class AzureTableClientFactory extends GenericClientFactory {
         }
     }
 
-    private boolean useDevServer(Properties properties) {
-        String devServer = (String) properties.get(AzureTableConstants.DEV_SERVER);
-        if (devServer != null && !devServer.isEmpty()) {
+    private boolean userStorageEmulator(Properties properties) {
+        String emulator = (String) properties.get(AzureTableConstants.STORAGE_EMULATOR);
+        if (emulator != null && !emulator.isEmpty()) {
             try {
-                return Boolean.parseBoolean(devServer);
+                return Boolean.parseBoolean(emulator);
             } catch (NumberFormatException nfe) {
-                throw new ClientLoaderException("Invalid dev server value " + devServer + ": ", nfe);
+                throw new ClientLoaderException("Invalid storage emulator value " + emulator + ": ", nfe);
             }
         }
         return false;
     }
 
-    private String parseDevProxy(Properties properties) {
-        String devProxy = (String) properties.get(AzureTableConstants.DEV_PROXY);
+    private String parseEmulatorProxy(Properties properties) {
+        String devProxy = (String) properties.get(AzureTableConstants.EMULATOR_PROXY);
         if (devProxy != null && !devProxy.isEmpty()) {
             return devProxy;
         }
@@ -170,9 +170,9 @@ public class AzureTableClientFactory extends GenericClientFactory {
     private boolean useHttp(Properties properties) {
         String protocol = (String) properties.get(AzureTableConstants.PROTOCOL);
         if (protocol != null && !protocol.isEmpty()) {
-            if (protocol.equalsIgnoreCase("HTTPS")) {
+            if (protocol.equalsIgnoreCase("HTTP")) {
                 return true;
-            } else if (protocol.equalsIgnoreCase("HTTP")) {
+            } else if (protocol.equalsIgnoreCase("HTTPS")) {
                 return false;
             }
             throw new ClientLoaderException("Invalid protocol " + protocol);

@@ -107,7 +107,7 @@ public class AzureTableClient extends ClientBase implements Client<AzureTableQue
 
         handleAttributes(tableEntity, entity, metamodel, entityMetadata, entityType.getAttributes());
         handleRelations(tableEntity, entityMetadata, rlHolders);
-        /* discriminator column is used for JPA inheritance */
+        // discriminator column is used for JPA inheritance
         handleDiscriminatorColumn(tableEntity, entityType);
 
         try {
@@ -122,8 +122,8 @@ public class AzureTableClient extends ClientBase implements Client<AzureTableQue
     private void handleAttributes(DynamicEntity tableEntity, Object entity, MetamodelImpl metamodel, EntityMetadata entityMetadata, Set<Attribute> attributes) {
         String idAttribute = ((AbstractAttribute) entityMetadata.getIdAttribute()).getJPAColumnName();
         for (Attribute attribute : attributes) {
-            // By pass ID attribute, is redundant since is also stored within the Key.
-            // By pass associations (i.e. relations) that are handled in handleRelations()
+            // by pass ID attribute, is redundant since is also stored within the Key.
+            // by pass associations (i.e. relations) that are handled in handleRelations()
             if (!attribute.isAssociation() && !((AbstractAttribute) attribute).getJPAColumnName().equals(idAttribute)) {
                 if (metamodel.isEmbeddable(((AbstractAttribute) attribute).getBindableJavaType())) {
                     processEmbeddableAttribute(tableEntity, entity, attribute);
@@ -305,9 +305,7 @@ public class AzureTableClient extends ClientBase implements Client<AzureTableQue
                         initializeAttribute(tableEntity, entity, attribute);
                     }
                 } else {
-                    // jump relations that are filled by query
-                    if (!entityMetadata.getRelation(attribute.getName()).getType().equals(Relation.ForeignKey.ONE_TO_MANY)
-                            && !entityMetadata.getRelation(attribute.getName()).getType().equals(Relation.ForeignKey.MANY_TO_MANY)) {
+                    if (!relationWillBeFilledByQuery(entityMetadata, attribute)) {
                         initializeRelation(tableEntity, attribute, relationMap);
                     }
                 }
@@ -317,6 +315,11 @@ public class AzureTableClient extends ClientBase implements Client<AzureTableQue
 
         String pKey = AzureTableKey.asString(tableEntity.getPartitionKey(), tableEntity.getRowKey());
         return new EnhanceEntity(entity, pKey, relationMap.isEmpty() ? null : relationMap);
+    }
+
+    private boolean relationWillBeFilledByQuery(EntityMetadata entityMetadata, Attribute attribute) {
+        Relation.ForeignKey relationType = entityMetadata.getRelation(attribute.getName()).getType();
+        return relationType.equals(Relation.ForeignKey.ONE_TO_MANY) || relationType.equals(Relation.ForeignKey.MANY_TO_MANY);
     }
 
     private void initializeID(DynamicEntity tableEntity, EntityMetadata entityMetadata, Object entity) {
@@ -331,24 +334,26 @@ public class AzureTableClient extends ClientBase implements Client<AzureTableQue
         String jpaColumnName = ((AbstractAttribute) attribute).getJPAColumnName();
         EntityProperty entityProperty = tableEntity.getProperties().get(jpaColumnName);
 
-        Object fieldValue;
-        Class<?> type = ((Field) attribute.getJavaMember()).getType();
-        if (type.isEnum()) {
-            EnumAccessor accessor = new EnumAccessor();
-            fieldValue = accessor.fromString(((AbstractAttribute) attribute).getBindableJavaType(), entityProperty.getValueAsString());
-        } else if (isCollectionOrMap(type)) {
-            try {
-                fieldValue = AzureTableUtils.deserialize(entityProperty);
-            } catch (ClassNotFoundException | IOException e) {
-                throw new KunderaException("Some errors occurred while deserializing the object: ", e);
+        if (jpaColumnName != null && entityProperty != null) {
+            Object fieldValue;
+            Class<?> type = ((Field) attribute.getJavaMember()).getType();
+            if (type.isEnum()) {
+                EnumAccessor accessor = new EnumAccessor();
+                fieldValue = accessor.fromString(((AbstractAttribute) attribute).getBindableJavaType(), entityProperty.getValueAsString());
+            } else if (isCollectionOrMap(type)) {
+                try {
+                    fieldValue = AzureTableUtils.deserialize(entityProperty);
+                } catch (ClassNotFoundException | IOException e) {
+                    throw new KunderaException("Some errors occurred while deserializing the object: ", e);
+                }
+            } else {
+                fieldValue = AzureTableUtils.getPropertyValue(entityProperty, type);
             }
-        } else {
-            fieldValue = AzureTableUtils.getPropertyValue(entityProperty, type);
-        }
 
-        if (jpaColumnName != null && fieldValue != null) {
-            logger.info("jpaColumnName = [" + jpaColumnName + "], fieldValue = [" + fieldValue + "]");
-            PropertyAccessorHelper.set(entity, (Field) attribute.getJavaMember(), fieldValue);
+            if (fieldValue != null) {
+                logger.info("jpaColumnName = [" + jpaColumnName + "], fieldValue = [" + fieldValue + "]");
+                PropertyAccessorHelper.set(entity, (Field) attribute.getJavaMember(), fieldValue);
+            }
         }
     }
 
@@ -375,10 +380,10 @@ public class AzureTableClient extends ClientBase implements Client<AzureTableQue
     private void initializeRelation(DynamicEntity tableEntity, Attribute attribute, Map<String, Object> relationMap) {
         String jpaColumnName = ((AbstractAttribute) attribute).getJPAColumnName();
         EntityProperty entityProperty = tableEntity.getProperties().get(jpaColumnName);
-        Object fieldValue = entityProperty.getValueAsString();
-        logger.info("jpaColumnName = [" + jpaColumnName + "], fieldValue = [" + fieldValue + "]");
 
-        if (jpaColumnName != null && fieldValue != null) {
+        if (jpaColumnName != null && entityProperty != null) {
+            Object fieldValue = entityProperty.getValueAsString();
+            logger.info("jpaColumnName = [" + jpaColumnName + "], fieldValue = [" + fieldValue + "]");
             // field value is a string representation of an AzureTableKey
             relationMap.put(jpaColumnName, fieldValue);
         }
@@ -422,6 +427,8 @@ public class AzureTableClient extends ClientBase implements Client<AzureTableQue
      * for example:
      *      select * from EmployeeMTObis (table name of entityClass)
      *      where DEPARTMENT_ID (colName) equals (colValue)
+     *
+     * note: colValue should be a string representation of AzureTableKey
      */
     @Override
     public List<Object> findByRelation(String colName, Object colValue, Class entityClass) {
@@ -429,10 +436,8 @@ public class AzureTableClient extends ClientBase implements Client<AzureTableQue
 
         EntityMetadata entityMetadata = KunderaMetadataManager.getEntityMetadata(kunderaMetadata, entityClass);
         String tableName = entityMetadata.getTableName();
-        // pass through AzureTableKey just for validation
-        AzureTableKey targetKey = new AzureTableKey(colValue.toString());
 
-        TableQuery<DynamicEntity> query = generateRelationQuery(tableName, colName, targetKey.toString());
+        TableQuery<DynamicEntity> query = generateRelationQuery(tableName, colName, colValue.toString());
         List<Object> results = new ArrayList<>();
         for (DynamicEntity entity : tableClient.execute(query)) {
             String entityKey = AzureTableKey.asString(entity.getPartitionKey(), entity.getRowKey());
@@ -450,23 +455,16 @@ public class AzureTableClient extends ClientBase implements Client<AzureTableQue
      *      select PROJECT_ID (columnName) from EMPLOYEE_PROJECT (tableName)
      *      where EMPLOYEE_ID (pKeyColumnName) equals (pKeyColumnValue)
      *
+     * note: pKeyColumnValue and columnName should be string representation of AzureTableKey(s)
      */
     @Override
     public <E> List<E> getColumnsById(String schemaName, String tableName, String pKeyColumnName, String columnName, Object pKeyColumnValue, Class columnJavaType) {
         logger.info("schemaName = [" + schemaName + "], tableName = [" + tableName + "], pKeyColumnName = [" + pKeyColumnName + "], columnName = [" + columnName + "], pKeyColumnValue = [" + pKeyColumnValue + "], columnJavaType = [" + columnJavaType + "]");
 
-        // pass through AzureTableKey just for validation
-        AzureTableKey sourceKey = new AzureTableKey(pKeyColumnValue.toString());
-        TableQuery<DynamicEntity> query = generateRelationQuery(tableName, pKeyColumnName, sourceKey.toString());
-
+        TableQuery<DynamicEntity> query = generateRelationQuery(tableName, pKeyColumnName, pKeyColumnValue.toString());
         List<E> results = new ArrayList<>();
         logger.info(columnName + " for " + pKeyColumnName + "[" + pKeyColumnValue + "]:");
         for (DynamicEntity entity : tableClient.execute(query)) {
-            // EntityProperty property = entity.getProperty(columnName);
-            // AzureTableKey entityKey = new AzureTableKey(property.getValueAsString());
-            // String key = entityKey.toString()
-
-            // columnName should be a string representation of AzureTableKey
             logger.info("\t" + entity.getProperty(columnName).getValueAsString());
             results.add((E) entity.getProperty(columnName).getValueAsString());
         }
@@ -482,22 +480,16 @@ public class AzureTableClient extends ClientBase implements Client<AzureTableQue
      *      select EMPLOYEE_ID (pKeyName) from EMPLOYEE_PROJECT (tableName)
      *      where PROJECT_ID (columnName) equals (columnValue)
      *
+     * note: columnValue should be a string representation of AzureTableKey
      */
     @Override
     public Object[] findIdsByColumn(String schemaName, String tableName, String pKeyName, String columnName, Object columnValue, Class entityClazz) {
         logger.info("schemaName = [" + schemaName + "], tableName = [" + tableName + "], pKeyName = [" + pKeyName + "], columnName = [" + columnName + "], columnValue = [" + columnValue + "], entityClazz = [" + entityClazz + "]");
 
-        // pass through AzureTableKey just for validation
-        AzureTableKey sourceKey = new AzureTableKey(columnValue.toString());
-        TableQuery<DynamicEntity> query = generateRelationQuery(tableName, columnName, sourceKey.toString());
-
+        TableQuery<DynamicEntity> query = generateRelationQuery(tableName, columnName, columnValue.toString());
         List<Object> results = new ArrayList<>();
         logger.info(pKeyName + " for " + columnName + "[" + columnValue + "]:");
         for (DynamicEntity entity : tableClient.execute(query)) {
-            // EntityProperty property = entity.getProperty(pKeyName);
-            // AzureTableKey entityKey = new AzureTableKey(property.getValueAsString());
-            // String key = entityKey.toString()
-
             // pKeyName should be a string representation of AzureTableKey
             logger.info("\t" + entity.getProperty(pKeyName).getValueAsString());
             results.add(entity.getProperty(pKeyName).getValueAsString());
@@ -513,6 +505,7 @@ public class AzureTableClient extends ClientBase implements Client<AzureTableQue
     public void delete(Object entity, Object pKey) {
         logger.info("entity = [" + entity + "], pKey = [" + pKey + "]");
 
+        // pass through AzureTableKey just for validation
         AzureTableKey key = new AzureTableKey(pKey.toString());
         EntityMetadata entityMetadata = KunderaMetadataManager.getEntityMetadata(kunderaMetadata, entity.getClass());
         try {
@@ -532,15 +525,13 @@ public class AzureTableClient extends ClientBase implements Client<AzureTableQue
      *      delete from EMPLOYEE_PROJECT (tableName)
      *      where EMPLOYEE_ID (columnName) equals (columnValue)
      *
+     * note: columnValue should be a string representation of AzureTableKey
      */
     @Override
     public void deleteByColumn(String schemaName, String tableName, String columnName, Object columnValue) {
         logger.info("schemaName = [" + schemaName + "], tableName = [" + tableName + "], columnName = [" + columnName + "], columnValue = [" + columnValue + "]");
 
-        // pass through AzureTableKey just for validation
-        AzureTableKey sourceKey = new AzureTableKey(columnValue.toString());
-        TableQuery<DynamicEntity> query = generateRelationQuery(tableName, columnName, sourceKey.toString());
-
+        TableQuery<DynamicEntity> query = generateRelationQuery(tableName, columnName, columnValue.toString());
         for (DynamicEntity entity : tableClient.execute(query)) {
             try {
                 TableOperation deleteOperation = TableOperation.delete(entity);

@@ -16,8 +16,6 @@ import java.util.Map;
  */
 public class DynamicEntity extends DynamicTableEntity {
 
-    private HashMap<String, EntityProperty> properties = new HashMap<>();
-
     public DynamicEntity() {
     }
 
@@ -33,16 +31,11 @@ public class DynamicEntity extends DynamicTableEntity {
     }
 
     public void setProperty(String name, EntityProperty entityProperty) {
-        this.properties.put(name, entityProperty);
-        super.setProperties(properties);
+        super.getProperties().put(name, entityProperty);
     }
 
     public EntityProperty getProperty(String name) {
-        if (this.properties.size() == 0) {
-            // case DynamicEntity retrieved from query
-            this.properties = getProperties();
-        }
-        return this.properties.get(name);
+        return super.getProperties().get(name);
     }
 
     @Override

@@ -21,8 +21,8 @@ public class AzureTableKey {
      *
      * @param rawKey the string representation of the key
      *
-     * @throws java.lang.NullPointerException     if rawKey is null
-     * @throws java.lang.IllegalArgumentException if rawKey is malformed
+     * @throws java.lang.NullPointerException     if {@code rawKey} is null
+     * @throws java.lang.IllegalArgumentException if {@code rawKey} is malformed
      */
     public AzureTableKey(String rawKey) {
         if (rawKey == null) {
@@ -54,6 +54,30 @@ public class AzureTableKey {
 
     public String getPartitionKey() {
         return partitionKey;
+    }
+
+    /**
+     * Helper method to get the partition key from the given string representation
+     * of a {@link it.polimi.client.azuretable.AzureTableKey}.
+     *
+     * @param key the {@link it.polimi.client.azuretable.AzureTableKey}
+     *
+     * @return the partition key
+     */
+    public static String getPrartitionKey(String key) {
+        return new AzureTableKey(key).getPartitionKey();
+    }
+
+    /**
+     * Helper method to get the row key from the given string representation
+     * of a {@link it.polimi.client.azuretable.AzureTableKey}.
+     *
+     * @param key the {@link it.polimi.client.azuretable.AzureTableKey}
+     *
+     * @return the row key
+     */
+    public static String getRowKey(String key) {
+        return new AzureTableKey(key).getRowKey();
     }
 
     @Override
