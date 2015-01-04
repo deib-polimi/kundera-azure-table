@@ -15,8 +15,10 @@
                         <property name="table.devserver.proxy" value="http://myProxyUri"></property>
                     -->
 
-                    <!-- optional, protocol to be used within requests http or https (default is http) -->
-                    <property name="table.protocol" value="http"></property>
+                    <!--
+                        optional, protocol to be used within requests http or https (default is https)
+                        <property name="table.protocol" value="http"></property>
+                    -->
                 </properties>
             </connection>
         </dataStore>

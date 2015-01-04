@@ -84,42 +84,6 @@ public class IdsTest extends TestBase {
     }
 
     @Test
-    public void userLongIdTest() {
-        print("user long id");
-        PhoneLong phone = new PhoneLong();
-        phone.setNumber(123456789L);
-        phone.setId(1L);
-        em.persist(phone);
-        Assert.assertNotNull(phone.getId());
-        Assert.assertEquals((Long) 1L, phone.getId());
-
-        clear();
-
-        print("read");
-        PhoneLong foundPhone = em.find(PhoneLong.class, 1L);
-        Assert.assertNotNull(foundPhone);
-        Assert.assertEquals((Long) 1L, foundPhone.getId());
-        Assert.assertEquals((Long) 123456789L, foundPhone.getNumber());
-
-        print("update");
-        foundPhone.setNumber(987654321L);
-        em.merge(foundPhone);
-
-        clear();
-
-        TypedQuery<PhoneLong> query = em.createQuery("SELECT p FROM PhoneLong p WHERE p.id = :id", PhoneLong.class);
-        foundPhone = query.setParameter("id", 1L).getSingleResult();
-        Assert.assertNotNull(foundPhone);
-        Assert.assertEquals((Long) 1L, foundPhone.getId());
-        Assert.assertEquals((Long) 987654321L, foundPhone.getNumber());
-
-        print("delete");
-        em.remove(foundPhone);
-        foundPhone = em.find(PhoneLong.class, 1L);
-        Assert.assertNull(foundPhone);
-    }
-
-    @Test
     public void invalidIdTypeTest() {
         print("invalid double id");
         PhoneInvalid1 phone = new PhoneInvalid1();

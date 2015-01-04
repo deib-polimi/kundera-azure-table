@@ -63,7 +63,7 @@ public class AzureTableClientFactory extends GenericClientFactory {
     }
 
     private String buildConnectionString() {
-        String protocol = "http";
+        String protocol = "https";
         Properties tableProperties = getClientSpecificProperties();
         if (tableProperties != null) {
             if (useDevServer(tableProperties)) {
@@ -73,8 +73,8 @@ public class AzureTableClientFactory extends GenericClientFactory {
                 }
                 return "UseDevelopmentStorage=true";
             }
-            if (useHttps(tableProperties)) {
-                protocol = "https";
+            if (useHttp(tableProperties)) {
+                protocol = "http";
             }
         }
 
@@ -167,7 +167,7 @@ public class AzureTableClientFactory extends GenericClientFactory {
         return null;
     }
 
-    private boolean useHttps(Properties properties) {
+    private boolean useHttp(Properties properties) {
         String protocol = (String) properties.get(AzureTableConstants.PROTOCOL);
         if (protocol != null && !protocol.isEmpty()) {
             if (protocol.equalsIgnoreCase("HTTPS")) {
