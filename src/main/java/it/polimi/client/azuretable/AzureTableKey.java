@@ -20,6 +20,7 @@ public class AzureTableKey {
      * Create a new instance of {@link it.polimi.client.azuretable.AzureTableKey} from its string representation.
      *
      * @param rawKey the string representation of the key
+     *
      * @throws java.lang.NullPointerException     if rawKey is null
      * @throws java.lang.IllegalArgumentException if rawKey is malformed
      */
@@ -40,6 +41,7 @@ public class AzureTableKey {
      *
      * @param partitionKey the partition key
      * @param rowKey       the row key
+     *
      * @return a string representation of the whole key
      */
     public static String asString(String partitionKey, String rowKey) {

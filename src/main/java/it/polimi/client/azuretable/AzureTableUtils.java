@@ -21,7 +21,9 @@ public class AzureTableUtils {
      *
      * @param entityMetadata metadata from Kundera ({@link com.impetus.kundera.persistence.EntityManagerFactoryImpl.KunderaMetadata}).
      * @param id             entity id.
+     *
      * @return a fresh new  {@link it.polimi.client.azuretable.DynamicEntity}
+     *
      * @throws com.impetus.kundera.KunderaException if id is not of type {@link String}.
      * @see it.polimi.client.azuretable.DynamicEntity
      */
@@ -37,7 +39,9 @@ public class AzureTableUtils {
      * Generate a {@link it.polimi.client.azuretable.DynamicEntity}.
      *
      * @param id string representation of {@link it.polimi.client.azuretable.AzureTableKey}.
+     *
      * @return a fresh new  {@link it.polimi.client.azuretable.DynamicEntity}
+     *
      * @see it.polimi.client.azuretable.AzureTableKey
      * @see it.polimi.client.azuretable.DynamicEntity
      */
@@ -61,7 +65,9 @@ public class AzureTableUtils {
      * Serialize an object into a byte[].
      *
      * @param obj object to be serialized.
+     *
      * @return a byte[] containing the serialization.
+     *
      * @throws java.io.IOException
      */
     public static byte[] serialize(Object obj) throws IOException {
@@ -75,7 +81,9 @@ public class AzureTableUtils {
      * Deserialize an {@link com.microsoft.windowsazure.services.table.client.EntityProperty}.
      *
      * @param property a datastore {@link com.microsoft.windowsazure.services.table.client.EntityProperty}.
+     *
      * @return the deserialized object.
+     *
      * @throws java.io.IOException
      * @throws ClassNotFoundException
      * @see com.microsoft.windowsazure.services.table.client.EntityProperty
@@ -91,7 +99,9 @@ public class AzureTableUtils {
      * Generate an instance of {@link com.microsoft.windowsazure.services.table.client.EntityProperty}.
      *
      * @param value the value to be wrapped into an {@link com.microsoft.windowsazure.services.table.client.EntityProperty}
+     *
      * @return an instance of {@link com.microsoft.windowsazure.services.table.client.EntityProperty} for the given object.
+     *
      * @throws com.impetus.kundera.KunderaException if type is not supported by AzureTable.
      */
     public static EntityProperty getEntityProperty(Object value) {
@@ -130,6 +140,7 @@ public class AzureTableUtils {
      *
      * @param entityProperty the property container
      * @param type           type class of the property to be retrieved
+     *
      * @return the retrieved property
      */
     public static Object getPropertyValue(EntityProperty entityProperty, Class<?> type) {
