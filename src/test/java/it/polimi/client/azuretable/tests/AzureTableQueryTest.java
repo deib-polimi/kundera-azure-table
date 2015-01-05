@@ -7,7 +7,6 @@ import it.polimi.client.azuretable.entities.PhoneType;
 import org.junit.Assert;
 import org.junit.Test;
 
-import javax.persistence.Query;
 import javax.persistence.TypedQuery;
 import java.util.List;
 
@@ -61,15 +60,15 @@ public class AzureTableQueryTest extends TestBase {
 
         clear();
 
-        print("select property");
-        Query projection = em.createQuery("SELECT e.name, e.salary FROM Employee e WHERE e.id = :id");
-        List results = projection.setParameter("id", emp1Id).getResultList();
-        Assert.assertTrue(results.size() == 2);
-        for (Object property : results) {
-            Assert.assertTrue(property.equals("Fabio") || property.equals(123L));
-        }
-
-        clear();
+//        print("select property");
+//        Query projection = em.createQuery("SELECT e.name, e.salary FROM Employee e WHERE e.id = :id");
+//        List results = projection.setParameter("id", emp1Id).getResultList();
+//        Assert.assertTrue(results.size() == 2);
+//        for (Object property : results) {
+//            Assert.assertTrue(property.equals("Fabio") || property.equals(123L));
+//        }
+//
+//        clear();
 
         print("where clause");
         query = em.createQuery("SELECT e FROM Employee e WHERE e.id = :id", Employee.class);
@@ -98,20 +97,6 @@ public class AzureTableQueryTest extends TestBase {
         Assert.assertEquals(phnId, foundPhone.getId());
         Assert.assertEquals((Long) 123L, foundPhone.getNumber());
         Assert.assertEquals(PhoneType.HOME, foundPhone.getType());
-
-        clear();
-
-        print("order by clause");
-        query = em.createQuery("SELECT e FROM Employee e ORDER BY e.name", Employee.class);
-        allEmployees = query.getResultList();
-        Assert.assertEquals(2, allEmployees.size());
-        Assert.assertTrue(allEmployees.get(0).getName().equals("Crizia"));
-        Assert.assertTrue(allEmployees.get(1).getName().equals("Fabio"));
-        query = em.createQuery("SELECT e FROM Employee e ORDER BY e.salary DESC", Employee.class);
-        allEmployees = query.getResultList();
-        Assert.assertEquals(2, allEmployees.size());
-        Assert.assertTrue(allEmployees.get(0).getSalary().equals(456L));
-        Assert.assertTrue(allEmployees.get(1).getSalary().equals(123L));
     }
 
     @Test
@@ -253,11 +238,10 @@ public class AzureTableQueryTest extends TestBase {
         }
         Assert.assertEquals(0, toCheck);
 
-        print("in");
+        /* IN operator is not supported */
         query = em.createQuery("SELECT e FROM Employee e WHERE e.name IN ('Fabio', 'Crizia')", Employee.class);
-        foundEmployees = query.getResultList();
-        Assert.assertNotNull(foundEmployees);
-        Assert.assertEquals(2, foundEmployees.size());
+        thrown.expect(KunderaException.class);
+        query.getResultList();
 
         /* LIKE operator is not supported */
         query = em.createQuery("SELECT e FROM Employee e WHERE e.name LIKE :name", Employee.class);

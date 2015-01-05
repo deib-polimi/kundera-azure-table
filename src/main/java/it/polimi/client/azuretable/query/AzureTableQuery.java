@@ -3,16 +3,21 @@ package it.polimi.client.azuretable.query;
 import com.impetus.kundera.client.Client;
 import com.impetus.kundera.metadata.KunderaMetadataManager;
 import com.impetus.kundera.metadata.model.EntityMetadata;
+import com.impetus.kundera.metadata.model.MetamodelImpl;
 import com.impetus.kundera.persistence.EntityManagerFactoryImpl;
 import com.impetus.kundera.persistence.EntityReader;
 import com.impetus.kundera.persistence.PersistenceDelegator;
 import com.impetus.kundera.query.KunderaQuery;
 import com.impetus.kundera.query.QueryImpl;
+import com.microsoft.windowsazure.services.table.client.TableQuery;
+import it.polimi.client.azuretable.AzureTableClient;
 import it.polimi.client.azuretable.AzureTableEntityReader;
+import it.polimi.client.azuretable.DynamicEntity;
 import org.apache.commons.lang.NotImplementedException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.persistence.metamodel.EntityType;
 import java.util.Iterator;
 import java.util.List;
 
@@ -45,8 +50,12 @@ public class AzureTableQuery extends QueryImpl {
      */
     @Override
     protected List<Object> populateEntities(EntityMetadata m, Client client) {
-        //TODO
-        return null;
+        if (logger.isDebugEnabled()) {
+            printQuery();
+        }
+
+        QueryBuilder builder = translateQuery(this.kunderaQuery, false);
+        return ((AzureTableClient) client).executeQuery(builder);
     }
 
     /*
@@ -54,8 +63,13 @@ public class AzureTableQuery extends QueryImpl {
      */
     @Override
     protected List<Object> recursivelyPopulateEntities(EntityMetadata m, Client client) {
-        //TODO
-        return null;
+        if (logger.isDebugEnabled()) {
+            printQuery();
+        }
+
+        QueryBuilder builder = translateQuery(this.kunderaQuery, true);
+        List<Object> queryResults = ((AzureTableClient) client).executeQuery(builder);
+        return setRelationEntities(queryResults, client, m);
     }
 
     /*
@@ -63,10 +77,24 @@ public class AzureTableQuery extends QueryImpl {
      */
     @Override
     protected int onExecuteUpdate() {
-        System.out.println("AzureTableQuery.onExecuteUpdate");
-        printQuery();
+        if (logger.isDebugEnabled()) {
+            printQuery();
+        }
 
         return onUpdateDeleteEvent();
+    }
+
+    private QueryBuilder translateQuery(KunderaQuery kunderaQuery, boolean holdRelationships) {
+        EntityMetadata entityMetadata = KunderaMetadataManager.getEntityMetadata(kunderaMetadata, kunderaQuery.getEntityClass());
+        MetamodelImpl metaModel = (MetamodelImpl) kunderaMetadata.getApplicationMetadata().getMetamodel(entityMetadata.getPersistenceUnit());
+        EntityType entityType = metaModel.entity(entityMetadata.getEntityClazz());
+
+        QueryBuilder builder = new QueryBuilder(entityMetadata, entityType, holdRelationships);
+        builder.setFrom(entityMetadata.getTableName())
+                //.addProjections(super.getColumns(kunderaQuery.getResult(), entityMetadata))
+                .addFilters(kunderaQuery.getFilterClauseQueue())
+                .setLimit(super.getMaxResults());
+        return builder;
     }
 
     /*
@@ -172,5 +200,13 @@ public class AzureTableQuery extends QueryImpl {
             return results;
         }
         return "[]";
+    }
+
+    public static String asString(TableQuery<DynamicEntity> query) {
+        if (query.getFilterString() != null) {
+            return "SELECT * FROM " + query.getSourceTableName() + " WHERE " + query.getFilterString() + " LIMIT " + query.getTakeCount().toString();
+        } else {
+            return "SELECT * FROM " + query.getSourceTableName() + " LIMIT " + query.getTakeCount().toString();
+        }
     }
 }

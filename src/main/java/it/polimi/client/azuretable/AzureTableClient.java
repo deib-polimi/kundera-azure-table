@@ -22,6 +22,7 @@ import com.impetus.kundera.property.accessor.EnumAccessor;
 import com.microsoft.windowsazure.services.core.storage.StorageException;
 import com.microsoft.windowsazure.services.table.client.*;
 import it.polimi.client.azuretable.query.AzureTableQuery;
+import it.polimi.client.azuretable.query.QueryBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -302,7 +303,7 @@ public class AzureTableClient extends ClientBase implements Client<AzureTableQue
         }
     }
 
-    private Object initializeEntity(DynamicEntity tableEntity, Class entityClass) throws IllegalAccessException, InstantiationException {
+    private EnhanceEntity initializeEntity(DynamicEntity tableEntity, Class entityClass) throws IllegalAccessException, InstantiationException {
         EntityMetadata entityMetadata = KunderaMetadataManager.getEntityMetadata(kunderaMetadata, entityClass);
         MetamodelImpl metamodel = KunderaMetadataManager.getMetamodel(kunderaMetadata, entityMetadata.getPersistenceUnit());
         EntityType entityType = metamodel.entity(entityMetadata.getEntityClazz());
@@ -586,5 +587,49 @@ public class AzureTableClient extends ClientBase implements Client<AzureTableQue
         logger.debug("SELECT * FROM " + tableName + " WHERE " + columnName + " = " + targetKey);
         return TableQuery.from(tableName, DynamicEntity.class)
                 .where(TableQuery.generateFilterCondition(columnName, TableQuery.QueryComparisons.EQUAL, targetKey));
+    }
+
+    public List<Object> executeQuery(QueryBuilder builder) {
+        logger.info(AzureTableQuery.asString(builder.getQuery()));
+
+        List<Object> results = new ArrayList<>();
+        int index = 0;
+        for (DynamicEntity entity : tableClient.execute(builder.getQuery())) {
+            logger.debug(entity.toString());
+            try {
+                EnhanceEntity ee = initializeEntity(entity, builder.getEntityClass());
+                if (!builder.isProjectionQuery()) {
+                    if (!builder.holdRelationships()) {
+                        /* comes from AzureTableQuery.populateEntities */
+                        results.add(ee.getEntity());
+                    } else {
+                        /* comes from AzureTableQuery.recursivelyPopulateEntities */
+                        results.add(ee);
+                    }
+                } else {
+                    for (String column : builder.getProjections()) {
+                        EntityProperty entityProperty = entity.getProperty(column);
+                        if (entityProperty == null) {
+                            throw new KunderaException("Entity does not contains property " + column + "");
+                        }
+                        // TODO  entityProperty.getValueAsX(...)
+                        results.add(entityProperty);
+                    }
+                }
+            } catch (InstantiationException | IllegalAccessException e) {
+                throw new KunderaException(e);
+            }
+
+            /*
+             * When you start iterating over result you'll initially get only builder.getLimit() items.
+             * But underneath, if you keep iterating over the result, the SDK will keep querying the table
+             * (and proceed to the next 'page' of builder.getLimit() items).
+             */
+            index++;
+            if (index == builder.getLimit()) {
+                break;
+            }
+        }
+        return results;
     }
 }
