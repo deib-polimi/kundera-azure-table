@@ -358,7 +358,7 @@ public class AzureTableClient extends ClientBase implements Client<AzureTableQue
     }
 
     private boolean isCollectionOrMap(Class<?> type) {
-        return type.getClass().isAssignableFrom(Collection.class) || type.getClass().isAssignableFrom(Map.class);
+        return Collection.class.isAssignableFrom(type) || Map.class.isAssignableFrom(type);
     }
 
     private void initializeEmbeddedAttribute(DynamicEntity tableEntity, Object entity, Attribute attribute) {

@@ -144,31 +144,31 @@ public class AzureTableUtils {
      * @return the retrieved property
      */
     public static Object getPropertyValue(EntityProperty entityProperty, Class<?> type) {
-        if (String.class.equals(type)) {
+        if (String.class.isAssignableFrom(type)) {
             return entityProperty.getValueAsString();
         }
-        if (Double.class.equals(type)) {
+        if (Double.class.isAssignableFrom(type)) {
             return entityProperty.getValueAsDouble();
         }
-        if (Integer.class.equals(type)) {
+        if (Integer.class.isAssignableFrom(type)) {
             return entityProperty.getValueAsInteger();
         }
-        if (Long.class.equals(type)) {
+        if (Long.class.isAssignableFrom(type)) {
             return entityProperty.getValueAsLong();
         }
-        if (Boolean.class.equals(type)) {
+        if (Boolean.class.isAssignableFrom(type)) {
             return entityProperty.getValueAsBoolean();
         }
-        if (byte[].class.equals(type)) {
+        if (byte[].class.isAssignableFrom(type)) {
             return entityProperty.getValueAsByteArray();
         }
-        if (Byte[].class.equals(type)) {
+        if (Byte[].class.isAssignableFrom(type)) {
             return entityProperty.getValueAsByteObjectArray();
         }
-        if (Date.class.equals(type)) {
+        if (Date.class.isAssignableFrom(type)) {
             return entityProperty.getValueAsDate();
         }
-        if (UUID.class.equals(type)) {
+        if (UUID.class.isAssignableFrom(type)) {
             return entityProperty.getValueAsUUID();
         }
         throw new KunderaException("Unknown type " + type);
