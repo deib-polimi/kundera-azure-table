@@ -11,6 +11,7 @@ import com.microsoft.windowsazure.services.core.storage.CloudStorageAccount;
 import com.microsoft.windowsazure.services.core.storage.StorageException;
 import com.microsoft.windowsazure.services.table.client.CloudTable;
 import com.microsoft.windowsazure.services.table.client.CloudTableClient;
+import it.polimi.client.azuretable.config.AzureTableConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -94,9 +95,9 @@ public class AzureTableSchemaManager extends AbstractSchemaManager implements Sc
         String storageConnectionString;
         if (this.userName == null || this.password == null) {
             // use storage emulator
-            storageConnectionString = "UseDevelopmentStorage=true;DevelopmentStorageProxyUri=http://127.0.0.1;";
+            storageConnectionString = "UseDevelopmentStorage=true;DevelopmentStorageProxyUri=" + AzureTableConstants.LOCALHOST;
         } else {
-            storageConnectionString = "DefaultEndpointsProtocol=http;AccountName=" + this.userName + ";AccountKey=" + this.password;
+            storageConnectionString = "DefaultEndpointsProtocol=" + AzureTableConstants.HTTP + ";AccountName=" + this.userName + ";AccountKey=" + this.password;
         }
 
         try {

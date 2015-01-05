@@ -63,7 +63,7 @@ public class AzureTableClientFactory extends GenericClientFactory {
     }
 
     private String buildConnectionString() {
-        String protocol = "https";
+        String protocol = AzureTableConstants.HTTPS;
         Properties tableProperties = getClientSpecificProperties();
         if (tableProperties != null) {
             if (userStorageEmulator(tableProperties)) {
@@ -71,10 +71,10 @@ public class AzureTableClientFactory extends GenericClientFactory {
                 if (devProxy != null) {
                     return "UseDevelopmentStorage=true;DevelopmentStorageProxyUri=" + devProxy;
                 }
-                return "UseDevelopmentStorage=true;DevelopmentStorageProxyUri=http://127.0.0.1";
+                return "UseDevelopmentStorage=true;DevelopmentStorageProxyUri=" + AzureTableConstants.LOCALHOST;
             }
             if (useHttp(tableProperties)) {
-                protocol = "http";
+                protocol = AzureTableConstants.HTTP;
             }
         }
 

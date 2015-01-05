@@ -31,6 +31,8 @@
             <!-- required, username maps to storage account name, password maps to storage account key -->
             <property name="kundera.username" value="your_storage_account"/>
             <property name="kundera.password" value="your_storage_account_key"/>
+            <!-- optional, 'create' or 'create-drop' -->
+            <property name="kundera.ddl.auto.prepare" value="create-drop"/>
             <property name="kundera.client.lookup.class" value="it.polimi.client.azuretable.AzureTableClientFactory"/>
         </properties>
     </persistence-unit>

@@ -10,10 +10,8 @@
                         note: using dev server, kundera.username and kundera.password in persistence xml are ignored
                     -->
                     <property name="table.emulator" value="true"></property>
-                    <!--
-                        optional, if using storage emulator set the value for a http proxy
-                        <property name="table.emulator.proxy" value="http://myProxyUri"></property>
-                    -->
+                    <!-- optional, if using storage emulator set the value for a http proxy (default to localhost) -->
+                    <property name="table.emulator.proxy" value="http://127.0.0.1"></property>
 
                     <!--
                         optional, protocol to be used within requests http or https (default is https)
