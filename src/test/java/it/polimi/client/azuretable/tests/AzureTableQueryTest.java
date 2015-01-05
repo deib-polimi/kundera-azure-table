@@ -60,19 +60,18 @@ public class AzureTableQueryTest extends TestBase {
 
         clear();
 
-//        print("select property");
-//        Query projection = em.createQuery("SELECT e.name, e.salary FROM Employee e WHERE e.id = :id");
-//        List results = projection.setParameter("id", emp1Id).getResultList();
-//        Assert.assertTrue(results.size() == 2);
-//        for (Object property : results) {
-//            Assert.assertTrue(property.equals("Fabio") || property.equals(123L));
-//        }
-//
-//        clear();
+        print("select property");
+        query = em.createQuery("SELECT e.name FROM Employee e WHERE e.id = :id", Employee.class);
+        Employee foundEmployee = query.setParameter("id", emp1Id).getSingleResult();
+        Assert.assertNotNull(foundEmployee);
+        Assert.assertEquals("Fabio", foundEmployee.getName());
+        Assert.assertNull(foundEmployee.getSalary());
+
+        clear();
 
         print("where clause");
         query = em.createQuery("SELECT e FROM Employee e WHERE e.id = :id", Employee.class);
-        Employee foundEmployee = query.setParameter("id", emp1Id).getSingleResult();
+        foundEmployee = query.setParameter("id", emp1Id).getSingleResult();
         Assert.assertNotNull(foundEmployee);
         Assert.assertEquals(emp1Id, foundEmployee.getId());
         Assert.assertEquals("Fabio", foundEmployee.getName());

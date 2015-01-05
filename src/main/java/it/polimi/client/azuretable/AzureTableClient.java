@@ -592,38 +592,27 @@ public class AzureTableClient extends ClientBase implements Client<AzureTableQue
     public List<Object> executeQuery(QueryBuilder builder) {
         logger.info(AzureTableQuery.asString(builder.getQuery()));
 
-        List<Object> results = new ArrayList<>();
         int index = 0;
+        List<Object> results = new ArrayList<>();
         for (DynamicEntity entity : tableClient.execute(builder.getQuery())) {
             logger.debug(entity.toString());
             try {
                 EnhanceEntity ee = initializeEntity(entity, builder.getEntityClass());
-                if (!builder.isProjectionQuery()) {
-                    if (!builder.holdRelationships()) {
+                if (!builder.holdRelationships()) {
                         /* comes from AzureTableQuery.populateEntities */
-                        results.add(ee.getEntity());
-                    } else {
-                        /* comes from AzureTableQuery.recursivelyPopulateEntities */
-                        results.add(ee);
-                    }
+                    results.add(ee.getEntity());
                 } else {
-                    for (String column : builder.getProjections()) {
-                        EntityProperty entityProperty = entity.getProperty(column);
-                        if (entityProperty == null) {
-                            throw new KunderaException("Entity does not contains property " + column + "");
-                        }
-                        // TODO  entityProperty.getValueAsX(...)
-                        results.add(entityProperty);
-                    }
+                        /* comes from AzureTableQuery.recursivelyPopulateEntities */
+                    results.add(ee);
                 }
             } catch (InstantiationException | IllegalAccessException e) {
                 throw new KunderaException(e);
             }
 
             /*
-             * When you start iterating over result you'll initially get only builder.getLimit() items.
+             * When you start iterating over result you'll initially get only X items.
              * But underneath, if you keep iterating over the result, the SDK will keep querying the table
-             * (and proceed to the next 'page' of builder.getLimit() items).
+             * (and proceed to the next 'page' of X items).
              */
             index++;
             if (index == builder.getLimit()) {

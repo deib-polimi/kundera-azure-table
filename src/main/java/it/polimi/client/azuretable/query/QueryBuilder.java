@@ -9,7 +9,9 @@ import it.polimi.client.azuretable.AzureTableKey;
 import it.polimi.client.azuretable.DynamicEntity;
 
 import javax.persistence.metamodel.EntityType;
-import java.util.*;
+import java.util.Date;
+import java.util.Queue;
+import java.util.UUID;
 
 /**
  * Helpful methods to translate from {@link com.impetus.kundera.query.KunderaQuery}
@@ -24,18 +26,12 @@ public class QueryBuilder {
     private TableQuery<DynamicEntity> query;
     private final EntityType entityType;
     private final EntityMetadata entityMetadata;
-    /** true if {@link javax.persistence.metamodel.EntityType} of the query holds relationships with other entities */
     private boolean holdRelationships;
-    /** true if the select query is different from "SELECT *" */
-    private boolean isProjectionQuery;
-    private Map<String, Class> projections;
 
     public QueryBuilder(EntityMetadata entityMetadata, EntityType entityType, boolean holdRelationships) {
-        this.entityMetadata = entityMetadata;
         this.entityType = entityType;
+        this.entityMetadata = entityMetadata;
         this.holdRelationships = holdRelationships;
-        this.isProjectionQuery = false;
-        this.projections = new HashMap<>();
     }
 
     public TableQuery<DynamicEntity> getQuery() {
@@ -48,14 +44,6 @@ public class QueryBuilder {
 
     public boolean holdRelationships() {
         return this.holdRelationships;
-    }
-
-    public boolean isProjectionQuery() {
-        return this.isProjectionQuery;
-    }
-
-    public Set<String> getProjections() {
-        return this.projections.keySet();
     }
 
     public int getLimit() {
@@ -86,48 +74,31 @@ public class QueryBuilder {
         return this;
     }
 
-//    /**
-//     * Add multiple projections to the query.
-//     *
-//     * @param columns array of column names on which add a projection.
-//     *
-//     * @return this, for chaining.
-//     *
-//     * @throws com.impetus.kundera.KunderaException if Java type is not found for a column.
-//     * @see com.google.appengine.api.datastore.PropertyProjection
-//     */
-//    public QueryBuilder addProjections(String[] columns) {
-//        if (columns.length != 0) {
-//            this.isProjectionQuery = true;
-//            for (String column : columns) {
-//                try {
-//                    String filedName = entityMetadata.getFieldName(column);
-//                    Attribute attribute = entityType.getAttribute(filedName);
-//                    addProjection(column, attribute.getJavaType());
-//                } catch (NullPointerException e) {
-//                    /* case attribute not found */
-//                    throw new KunderaException("Cannot find Java type for " + column + ": ", e);
-//                }
-//            }
-//        }
-//        return this;
-//    }
-//
-//    /**
-//     * Add a projection to the query.
-//     *
-//     * @param column     the column name.
-//     * @param columnType Java type of the column.
-//     *
-//     * @return this, for chaining.
-//     *
-//     * @see com.google.appengine.api.datastore.PropertyProjection
-//     */
-//    public QueryBuilder addProjection(String column, Class columnType) {
-//        this.projections.put(column, columnType);
-//        this.query.addProjection(new PropertyProjection(column, columnType));
-//        return this;
-//    }
+    /**
+     * Add multiple projections to the query.
+     *
+     * @param columns array of column names on which add a projection.
+     *
+     * @return this, for chaining.
+     */
+    public QueryBuilder addProjections(String[] columns) {
+        if (columns.length != 0) {
+            this.query.select(columns);
+        }
+        return this;
+    }
+
+    /**
+     * Add a single projection to the query.
+     *
+     * @param column the column name.
+     *
+     * @return this, for chaining.
+     */
+    public QueryBuilder addProjection(String column) {
+        this.query.select(new String[]{column});
+        return this;
+    }
 
     /**
      * Add multiple filters to the query.
@@ -162,7 +133,7 @@ public class QueryBuilder {
     }
 
     /**
-     * Add a filters to the query.
+     * Add a single filter to the query.
      *
      * @param propertyFilter azure table filter string.
      *

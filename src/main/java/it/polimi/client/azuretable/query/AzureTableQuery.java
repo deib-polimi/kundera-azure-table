@@ -18,6 +18,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.persistence.metamodel.EntityType;
+import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 
@@ -91,7 +92,7 @@ public class AzureTableQuery extends QueryImpl {
 
         QueryBuilder builder = new QueryBuilder(entityMetadata, entityType, holdRelationships);
         builder.setFrom(entityMetadata.getTableName())
-                //.addProjections(super.getColumns(kunderaQuery.getResult(), entityMetadata))
+                .addProjections(super.getColumns(kunderaQuery.getResult(), entityMetadata))
                 .addFilters(kunderaQuery.getFilterClauseQueue())
                 .setLimit(super.getMaxResults());
         return builder;
@@ -203,10 +204,14 @@ public class AzureTableQuery extends QueryImpl {
     }
 
     public static String asString(TableQuery<DynamicEntity> query) {
-        if (query.getFilterString() != null) {
-            return "SELECT * FROM " + query.getSourceTableName() + " WHERE " + query.getFilterString() + " LIMIT " + query.getTakeCount().toString();
-        } else {
-            return "SELECT * FROM " + query.getSourceTableName() + " LIMIT " + query.getTakeCount().toString();
-        }
+        String[] columns = query.getColumns();
+        String where = query.getFilterString();
+
+        String queryString = "SELECT ";
+        queryString += columns != null ? Arrays.deepToString(columns).replace("[", "").replace("]", "") : "*";
+        queryString += " FROM " + query.getSourceTableName();
+        queryString += where != null ? " WHERE " + where : "";
+        queryString += " LIMIT " + query.getTakeCount().toString();
+        return queryString;
     }
 }
