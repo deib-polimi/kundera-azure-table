@@ -204,7 +204,10 @@ public class QueryBuilder {
     }
 
     private String generateKeyFilter(AzureTableKey key) {
-        return "(PartitionKey eq '" + key.getPartitionKey() + "') and (RowKey ge '" + key.getRowKey() + "')";
+        return TableQuery.combineFilters(
+                TableQuery.generateFilterCondition("PartitionKey", TableQuery.QueryComparisons.EQUAL, key.getPartitionKey()),
+                TableQuery.Operators.AND,
+                TableQuery.generateFilterCondition("RowKey", TableQuery.QueryComparisons.EQUAL, key.getRowKey()));
     }
 
     private String generateFilterCondition(String property, String operator, Object filterValue) {
