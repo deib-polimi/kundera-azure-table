@@ -26,6 +26,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.persistence.metamodel.Attribute;
+import javax.persistence.metamodel.EmbeddableType;
 import javax.persistence.metamodel.EntityType;
 import java.io.IOException;
 import java.lang.reflect.Field;
@@ -126,7 +127,7 @@ public class AzureTableClient extends ClientBase implements Client<AzureTableQue
             // by pass associations (i.e. relations) that are handled in handleRelations()
             if (!attribute.isAssociation() && !((AbstractAttribute) attribute).getJPAColumnName().equals(idAttribute)) {
                 if (metamodel.isEmbeddable(((AbstractAttribute) attribute).getBindableJavaType())) {
-                    processEmbeddableAttribute(tableEntity, entity, attribute);
+                    processEmbeddableAttribute(tableEntity, entity, attribute, metamodel);
                 } else {
                     processAttribute(tableEntity, entity, attribute);
                 }
@@ -156,16 +157,34 @@ public class AzureTableClient extends ClientBase implements Client<AzureTableQue
         }
     }
 
-    private void processEmbeddableAttribute(DynamicEntity tableEntity, Object entity, Attribute attribute) {
+    private void processEmbeddableAttribute(DynamicEntity tableEntity, Object entity, Attribute attribute, MetamodelImpl metamodel) {
         Field field = (Field) attribute.getJavaMember();
         String jpaColumnName = ((AbstractAttribute) attribute).getJPAColumnName();
         Object embeddedObj = PropertyAccessorHelper.getObject(entity, field);
         logger.info("field = [" + field.getName() + "], jpaColumnName = [" + jpaColumnName + "], embeddedObj = [" + embeddedObj + "]");
 
-        //embedded attributes are not supported by AzureTable, they must be serialized
+        //embedded objects are not supported by AzureTable, they must be serialized
         try {
-            embeddedObj = AzureTableUtils.serialize(embeddedObj);
-            AzureTableUtils.setPropertyHelper(tableEntity, jpaColumnName, embeddedObj);
+            EmbeddedEntity embeddedEntity = new EmbeddedEntity();
+            EmbeddableType embeddable = metamodel.embeddable(((AbstractAttribute) attribute).getBindableJavaType());
+            Set<Attribute> embeddedAttributes = embeddable.getAttributes();
+            for (Attribute embeddedAttribute : embeddedAttributes) {
+                processEmbeddedField(embeddedEntity, embeddedObj, embeddedAttribute);
+            }
+            AzureTableUtils.setPropertyHelper(tableEntity, jpaColumnName, AzureTableUtils.serialize(embeddedEntity));
+        } catch (IOException e) {
+            throw new KunderaException("Some errors occurred while serializing the object: ", e);
+        }
+    }
+
+    private void processEmbeddedField(EmbeddedEntity embeddedEntity, Object embeddedObj, Attribute attribute) {
+        Field field = (Field) attribute.getJavaMember();
+        Object valueObj = PropertyAccessorHelper.getObject(embeddedObj, field);
+        String jpaColumnName = ((AbstractAttribute) attribute).getJPAColumnName();
+        logger.info("field = [" + field.getName() + "], jpaColumnName = [" + jpaColumnName + "], embeddedValueObj = [" + valueObj + "]");
+
+        try {
+            embeddedEntity.setProperty(jpaColumnName, AzureTableUtils.serialize(valueObj));
         } catch (IOException e) {
             throw new KunderaException("Some errors occurred while serializing the object: ", e);
         }
@@ -176,10 +195,9 @@ public class AzureTableClient extends ClientBase implements Client<AzureTableQue
             for (RelationHolder rh : rlHolders) {
                 String jpaColumnName = rh.getRelationName();
                 String fieldName = entityMetadata.getFieldName(jpaColumnName);
-                Relation relation = entityMetadata.getRelation(fieldName);
                 Object targetId = rh.getRelationValue();
 
-                if (relation != null && jpaColumnName != null && targetId != null) {
+                if (jpaColumnName != null && targetId != null) {
                     // pass through AzureTableKey just for validation
                     AzureTableKey targetKey = new AzureTableKey(targetId.toString());
                     logger.info("field = [" + fieldName + "], jpaColumnName = [" + jpaColumnName + "], targetKey = [" + targetKey.toString() + "]");
@@ -300,7 +318,7 @@ public class AzureTableClient extends ClientBase implements Client<AzureTableQue
             if (!((AbstractAttribute) attribute).getJPAColumnName().equals(idAttribute)) {
                 if (!attribute.isAssociation()) {
                     if (metamodel.isEmbeddable(((AbstractAttribute) attribute).getBindableJavaType())) {
-                        initializeEmbeddedAttribute(tableEntity, entity, attribute);
+                        initializeEmbeddedAttribute(tableEntity, entity, attribute, metamodel);
                     } else {
                         initializeAttribute(tableEntity, entity, attribute);
                     }
@@ -361,7 +379,7 @@ public class AzureTableClient extends ClientBase implements Client<AzureTableQue
         return Collection.class.isAssignableFrom(type) || Map.class.isAssignableFrom(type);
     }
 
-    private void initializeEmbeddedAttribute(DynamicEntity tableEntity, Object entity, Attribute attribute) {
+    private void initializeEmbeddedAttribute(DynamicEntity tableEntity, Object entity, Attribute attribute, MetamodelImpl metamodel) {
         String jpaColumnName = ((AbstractAttribute) attribute).getJPAColumnName();
         EntityProperty entityProperty = tableEntity.getProperties().get(jpaColumnName);
 
@@ -369,11 +387,29 @@ public class AzureTableClient extends ClientBase implements Client<AzureTableQue
             logger.info("jpaColumnName = [" + jpaColumnName + "], embedded entity");
 
             try {
-                Object embeddedObj = AzureTableUtils.deserialize(entityProperty);
+                EmbeddedEntity embeddedEntity = (EmbeddedEntity) AzureTableUtils.deserialize(entityProperty);
+                EmbeddableType embeddable = metamodel.embeddable(((AbstractAttribute) attribute).getBindableJavaType());
+                Object embeddedObj = embeddable.getJavaType().newInstance();
+                Set<Attribute> embeddedAttributes = embeddable.getAttributes();
+                for (Attribute embeddedAttribute : embeddedAttributes) {
+                    initializeEmbeddedField(embeddedEntity, embeddedObj, embeddedAttribute);
+                }
                 PropertyAccessorHelper.set(entity, (Field) attribute.getJavaMember(), embeddedObj);
-            } catch (ClassNotFoundException | IOException e) {
+            } catch (IllegalAccessException | InstantiationException | ClassNotFoundException | IOException e) {
                 throw new KunderaException("Some errors occurred while deserializing the object: ", e);
             }
+        }
+    }
+
+    private void initializeEmbeddedField(EmbeddedEntity embeddedEntity, Object embeddedObj, Attribute attribute) {
+        try {
+            String jpaColumnName = ((AbstractAttribute) attribute).getJPAColumnName();
+            Object fieldValue = AzureTableUtils.deserialize(embeddedEntity.getProperty(jpaColumnName));
+            logger.info("jpaColumnName = [" + jpaColumnName + "], fieldValue = [" + fieldValue.toString() + "]");
+
+            PropertyAccessorHelper.set(embeddedObj, (Field) attribute.getJavaMember(), fieldValue);
+        } catch (IOException | ClassNotFoundException e) {
+            throw new KunderaException("Some errors occurred while deserializing the field " + attribute.getName() + ": ", e);
         }
     }
 

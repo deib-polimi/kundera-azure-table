@@ -96,6 +96,22 @@ public class AzureTableUtils {
     }
 
     /**
+     * Deserialize a {@code byte[]}.
+     *
+     * @param bytes the {@code byte[]} to be deserialized
+     *
+     * @return the deserialized object.
+     *
+     * @throws IOException
+     * @throws ClassNotFoundException
+     */
+    public static Object deserialize(byte[] bytes) throws IOException, ClassNotFoundException {
+        ByteArrayInputStream b = new ByteArrayInputStream(bytes);
+        ObjectInputStream o = new ObjectInputStream(b);
+        return o.readObject();
+    }
+
+    /**
      * Generate an instance of {@link com.microsoft.windowsazure.services.table.client.EntityProperty}.
      *
      * @param value the value to be wrapped into an {@link com.microsoft.windowsazure.services.table.client.EntityProperty}
