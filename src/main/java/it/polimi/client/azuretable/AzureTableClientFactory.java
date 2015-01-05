@@ -152,8 +152,8 @@ public class AzureTableClientFactory extends GenericClientFactory {
         if (emulator != null && !emulator.isEmpty()) {
             try {
                 return Boolean.parseBoolean(emulator);
-            } catch (NumberFormatException nfe) {
-                throw new ClientLoaderException("Invalid storage emulator value " + emulator + ": ", nfe);
+            } catch (NumberFormatException e) {
+                throw new ClientLoaderException("Invalid storage emulator value " + emulator + ": ", e);
             }
         }
         return false;
@@ -170,9 +170,9 @@ public class AzureTableClientFactory extends GenericClientFactory {
     private boolean useHttp(Properties properties) {
         String protocol = (String) properties.get(AzureTableConstants.PROTOCOL);
         if (protocol != null && !protocol.isEmpty()) {
-            if (protocol.equalsIgnoreCase("HTTP")) {
+            if (protocol.equalsIgnoreCase(AzureTableConstants.HTTP)) {
                 return true;
-            } else if (protocol.equalsIgnoreCase("HTTPS")) {
+            } else if (protocol.equalsIgnoreCase(AzureTableConstants.HTTPS)) {
                 return false;
             }
             throw new ClientLoaderException("Invalid protocol " + protocol);
