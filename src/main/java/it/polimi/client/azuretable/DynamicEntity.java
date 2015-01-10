@@ -16,7 +16,8 @@ import java.util.Map;
  */
 public class DynamicEntity extends DynamicTableEntity {
 
-    public DynamicEntity() {}
+    public DynamicEntity() {
+    }
 
     public DynamicEntity(String partitionKey, String rowKey) {
         super.setPartitionKey(partitionKey);

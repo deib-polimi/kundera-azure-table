@@ -49,7 +49,7 @@ public class AzureTablePropertyReader extends AbstractPropertyReader implements 
         public DataStore getDataStore() {
             if (getClientProperties() != null && getClientProperties().getDatastores() != null) {
                 for (DataStore dataStore : getClientProperties().getDatastores()) {
-                    if (dataStore.getName() != null && dataStore.getName().trim().equalsIgnoreCase("azure-table")) {
+                    if (dataStore.getName() != null && "azure-table".equalsIgnoreCase(dataStore.getName().trim())) {
                         return dataStore;
                     }
                 }

@@ -52,7 +52,7 @@ public class AzureTableQuery extends QueryImpl {
     @Override
     protected List<Object> populateEntities(EntityMetadata m, Client client) {
         if (logger.isDebugEnabled()) {
-            printQuery();
+            logger.info(this.getQueryString());
         }
 
         QueryBuilder builder = translateQuery(this.kunderaQuery, false);
@@ -65,7 +65,7 @@ public class AzureTableQuery extends QueryImpl {
     @Override
     protected List<Object> recursivelyPopulateEntities(EntityMetadata m, Client client) {
         if (logger.isDebugEnabled()) {
-            printQuery();
+            logger.info(this.getQueryString());
         }
 
         QueryBuilder builder = translateQuery(this.kunderaQuery, true);
@@ -79,7 +79,7 @@ public class AzureTableQuery extends QueryImpl {
     @Override
     protected int onExecuteUpdate() {
         if (logger.isDebugEnabled()) {
-            printQuery();
+            logger.info(this.getQueryString());
         }
 
         return onUpdateDeleteEvent();
@@ -103,7 +103,6 @@ public class AzureTableQuery extends QueryImpl {
      */
     @Override
     public Iterator iterate() {
-        System.out.println("DatastoreQuery.iterate");
         // TODO
         //return new ResultIterator(...)
         throw new NotImplementedException();
@@ -118,8 +117,8 @@ public class AzureTableQuery extends QueryImpl {
     /*---------------------------------------------------------------------------------*/
     /*--------------------- print utils for DEBUG purposes ----------------------------*/
 
-    private void printQuery() {
-        System.out.println("kunderaQuery = [\n\t" +
+    private String getQueryString() {
+        return "kunderaQuery = [\n\t" +
                 "from = " + this.kunderaQuery.getFrom() + "\n\t" +
                 "entityClass = " + this.kunderaQuery.getEntityClass() + "\n\t" +
                 "entityAlias = " + this.kunderaQuery.getEntityAlias() + "\n\t" +
@@ -131,7 +130,7 @@ public class AzureTableQuery extends QueryImpl {
                 "getResults = " + resultString() + "\n\t" +
                 "columnsToSelect = " + columnsString() + "\n\t" +
                 "updateQueue = " + updateClauseQueueString() + "\n\t" +
-                "filterQueue = " + this.kunderaQuery.getFilterClauseQueue() + "\n]\n");
+                "filterQueue = " + this.kunderaQuery.getFilterClauseQueue() + "\n]\n";
     }
 
     private String resultString() {

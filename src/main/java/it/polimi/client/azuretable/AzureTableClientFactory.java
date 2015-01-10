@@ -30,15 +30,11 @@ import java.util.Properties;
  */
 public class AzureTableClientFactory extends GenericClientFactory {
 
-    private static Logger logger;
+    private static Logger logger = LoggerFactory.getLogger(AzureTableClientFactory.class);
     private EntityReader reader;
     private SchemaManager schemaManager;
     private CloudStorageAccount storageAccount;
     private CloudTableClient tableClient;
-
-    static {
-        logger = LoggerFactory.getLogger(AzureTableClientFactory.class);
-    }
 
     @Override
     public void initialize(Map<String, Object> puProperties) {
@@ -68,10 +64,7 @@ public class AzureTableClientFactory extends GenericClientFactory {
         if (tableProperties != null) {
             if (userStorageEmulator(tableProperties)) {
                 String devProxy = parseEmulatorProxy(tableProperties);
-                if (devProxy != null) {
-                    return "UseDevelopmentStorage=true;DevelopmentStorageProxyUri=" + devProxy;
-                }
-                return "UseDevelopmentStorage=true;DevelopmentStorageProxyUri=" + AzureTableConstants.LOCALHOST;
+                return "UseDevelopmentStorage=true;DevelopmentStorageProxyUri=" + devProxy;
             }
             if (useHttp(tableProperties)) {
                 protocol = AzureTableConstants.HTTP;
@@ -94,11 +87,8 @@ public class AzureTableClientFactory extends GenericClientFactory {
             accountKey = (String) properties.get(PersistenceProperties.KUNDERA_PASSWORD);
         }
 
-        if (accountName == null) {
-            throw new ClientLoaderException("Configuration error, missing storage account name as kundera.username in persistence.xml");
-        }
-        if (accountKey == null) {
-            throw new ClientLoaderException("Configuration error, missing storage account key as kundera.password in persistence.xml");
+        if (accountName == null || accountKey == null) {
+            throw new ClientLoaderException("Configuration error, check kundera.username kundera.password and in persistence.xml");
         }
         return "DefaultEndpointsProtocol=" + protocol + ";AccountName=" + accountName + ";AccountKey=" + accountKey;
     }
@@ -164,7 +154,7 @@ public class AzureTableClientFactory extends GenericClientFactory {
         if (devProxy != null && !devProxy.isEmpty()) {
             return devProxy;
         }
-        return null;
+        return AzureTableConstants.LOCALHOST;
     }
 
     private boolean useHttp(Properties properties) {

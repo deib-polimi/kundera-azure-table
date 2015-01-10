@@ -14,5 +14,8 @@ public class AzureTableConstants {
     public static final String STORAGE_EMULATOR = "table.emulator";
     public static final String EMULATOR_PROXY = "table.emulator.proxy";
 
-    public final static String PROTOCOL = "table.protocol";
+    public static final String PROTOCOL = "table.protocol";
+
+    private AzureTableConstants() {
+    }
 }

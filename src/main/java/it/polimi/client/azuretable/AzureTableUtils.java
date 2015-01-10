@@ -15,6 +15,9 @@ import java.util.UUID;
  */
 public class AzureTableUtils {
 
+    private AzureTableUtils() {
+    }
+
     /**
      * Generate a {@link it.polimi.client.azuretable.DynamicEntity} from
      * {@link com.impetus.kundera.metadata.model.EntityMetadata}.

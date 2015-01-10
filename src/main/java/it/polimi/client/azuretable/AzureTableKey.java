@@ -7,9 +7,10 @@ package it.polimi.client.azuretable;
  */
 public class AzureTableKey {
 
+    public static final int KEY_PARTS = 2;
+    public static final String SEPARATOR = "_";
     private String rowKey;
     private String partitionKey;
-    public final String SEPARATOR = "_";
 
     public AzureTableKey(String partitionKey, String rowKey) {
         this.partitionKey = partitionKey;
@@ -29,7 +30,7 @@ public class AzureTableKey {
             throw new NullPointerException("key cannot be null");
         }
         String[] parts = rawKey.split(SEPARATOR);
-        if (parts.length != 2) {
+        if (parts.length != KEY_PARTS) {
             throw new IllegalArgumentException("key [" + rawKey + "], is malformed and cannot be parsed");
         }
         this.partitionKey = parts[0];

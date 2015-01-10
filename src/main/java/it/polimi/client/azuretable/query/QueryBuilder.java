@@ -145,9 +145,9 @@ public class QueryBuilder {
     }
 
     private String composeFilter(String propertyFilter, String composeOperator, String previousFilter) {
-        if (composeOperator.equalsIgnoreCase("AND")) {
+        if ("AND".equalsIgnoreCase(composeOperator)) {
             return TableQuery.combineFilters(previousFilter, TableQuery.Operators.AND, propertyFilter);
-        } else if (composeOperator.equalsIgnoreCase("OR")) {
+        } else if ("OR".equalsIgnoreCase(composeOperator)) {
             return TableQuery.combineFilters(previousFilter, TableQuery.Operators.OR, propertyFilter);
         }
         throw new KunderaException("Composition with " + composeOperator + " is not supported by Azure Table");
@@ -164,14 +164,14 @@ public class QueryBuilder {
             /* filter on related entity */
             AzureTableKey key = new AzureTableKey(filterValue.toString());
             return TableQuery.generateFilterCondition(property, operator, key.toString());
-        } else if (property.equals(idColumnName)) {
+        }
+        if (property.equals(idColumnName)) {
             /* filter on entity ID */
             AzureTableKey key = new AzureTableKey(filterValue.toString());
             return generateKeyFilter(key);
-        } else {
-            /* filter on entity filed */
-            return generateFilterCondition(property, operator, filterValue);
         }
+        /* filter on entity filed */
+        return generateFilterCondition(property, operator, filterValue);
     }
 
     private String generateKeyFilter(AzureTableKey key) {
@@ -213,6 +213,7 @@ public class QueryBuilder {
     }
 
     private String parseCondition(String condition) {
+        /* BETWEEN is automatically converted in (X >= K1 AND X <= K2) by Kundera */
         switch (condition) {
             case "=":
                 return TableQuery.QueryComparisons.EQUAL;
@@ -226,8 +227,8 @@ public class QueryBuilder {
                 return TableQuery.QueryComparisons.LESS_THAN;
             case "<=":
                 return TableQuery.QueryComparisons.LESS_THAN_OR_EQUAL;
+            default:
+                throw new KunderaException("Condition " + condition + " is not supported by Azure Table");
         }
-        /* BETWEEN is automatically converted in (X >= K1 AND X <= K2) by Kundera */
-        throw new KunderaException("Condition " + condition + " is not supported by Azure Table");
     }
 }

@@ -12,7 +12,8 @@ public class EmbeddedEntity implements Serializable {
 
     private HashMap<String, byte[]> properties = new HashMap<>();
 
-    public EmbeddedEntity() {}
+    public EmbeddedEntity() {
+    }
 
     public void setProperty(String name, byte[] value) {
         this.properties.put(name, value);
