@@ -37,6 +37,14 @@ public class AzureTableKey {
         this.rowKey = parts[1];
     }
 
+    public String getRowKey() {
+        return rowKey;
+    }
+
+    public String getPartitionKey() {
+        return partitionKey;
+    }
+
     /**
      * Helper method to generate a String key given partition key and row key.
      *
@@ -47,14 +55,6 @@ public class AzureTableKey {
      */
     public static String asString(String partitionKey, String rowKey) {
         return new AzureTableKey(partitionKey, rowKey).toString();
-    }
-
-    public String getRowKey() {
-        return rowKey;
-    }
-
-    public String getPartitionKey() {
-        return partitionKey;
     }
 
     /**
