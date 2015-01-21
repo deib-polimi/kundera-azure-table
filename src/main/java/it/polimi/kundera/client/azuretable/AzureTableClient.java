@@ -21,6 +21,7 @@ import com.impetus.kundera.property.PropertyAccessorHelper;
 import com.impetus.kundera.property.accessor.EnumAccessor;
 import com.microsoft.windowsazure.services.core.storage.StorageException;
 import com.microsoft.windowsazure.services.table.client.*;
+import it.polimi.kundera.client.azuretable.config.AzureTableConstants;
 import it.polimi.kundera.client.azuretable.query.AzureTableQuery;
 import it.polimi.kundera.client.azuretable.query.QueryBuilder;
 import org.slf4j.Logger;
@@ -79,12 +80,7 @@ public class AzureTableClient extends ClientBase implements Client<AzureTableQue
 
     @Override
     public Object generate() {
-        /*
-         * TODO partition key maybe the same for every row in the same table ?
-         * problem: if is user  to set it, no problem, but here is impossible to assign
-         * a partition key per table since is not available the table here
-         */
-        String partitionKey = "DEFAULT";
+        String partitionKey = AzureTableConstants.getPartitionKey();
         String rowKey = UUID.randomUUID().toString();
         // return string representation since Kundera does not support AzureTableKey as data type
         return AzureTableKey.asString(partitionKey, rowKey);

@@ -47,7 +47,19 @@ public class AzureTableClientFactory extends GenericClientFactory {
 
     @Override
     protected Object createPoolOrConnection() {
-        String storageConnectionString = buildConnectionString();
+        String storageConnectionString;
+        Properties tableProperties = getClientSpecificProperties();
+        if (tableProperties != null) {
+            if (userStorageEmulator(tableProperties)) {
+                storageConnectionString = buildEmulatorConnectionString(parseEmulatorProxy(tableProperties));
+            } else {
+                storageConnectionString = buildConnectionString(useHttp(tableProperties));
+            }
+            AzureTableConstants.setPartitionKey(parsePartitionKey(tableProperties));
+        } else {
+            storageConnectionString = buildConnectionString(false);
+        }
+
         try {
             storageAccount = CloudStorageAccount.parse(storageConnectionString);
             logger.info("Connected to Azure Tables with connection string: " + storageConnectionString);
@@ -58,19 +70,11 @@ public class AzureTableClientFactory extends GenericClientFactory {
         }
     }
 
-    private String buildConnectionString() {
-        String protocol = AzureTableConstants.HTTPS;
-        Properties tableProperties = getClientSpecificProperties();
-        if (tableProperties != null) {
-            if (userStorageEmulator(tableProperties)) {
-                String devProxy = parseEmulatorProxy(tableProperties);
-                return "UseDevelopmentStorage=true;DevelopmentStorageProxyUri=" + devProxy;
-            }
-            if (useHttp(tableProperties)) {
-                protocol = AzureTableConstants.HTTP;
-            }
-        }
+    private String buildEmulatorConnectionString(String emulatorProxy) {
+        return "UseDevelopmentStorage=true;DevelopmentStorageProxyUri=" + emulatorProxy;
+    }
 
+    private String buildConnectionString(boolean useHttp) {
         String pu = getPersistenceUnit();
         PersistenceUnitMetadata puMetadata = kunderaMetadata.getApplicationMetadata().getPersistenceUnitMetadata(pu);
         Properties properties = puMetadata.getProperties();
@@ -90,6 +94,8 @@ public class AzureTableClientFactory extends GenericClientFactory {
         if (accountName == null || accountKey == null) {
             throw new ClientLoaderException("Configuration error, check kundera.username kundera.password and in persistence.xml");
         }
+
+        String protocol = useHttp ? AzureTableConstants.HTTP : AzureTableConstants.HTTPS;
         return "DefaultEndpointsProtocol=" + protocol + ";AccountName=" + accountName + ";AccountKey=" + accountKey;
     }
 
@@ -168,6 +174,14 @@ public class AzureTableClientFactory extends GenericClientFactory {
             throw new ClientLoaderException("Invalid protocol " + protocol);
         }
         return false;
+    }
+
+    private String parsePartitionKey(Properties properties) {
+        String partition = (String) properties.get(AzureTableConstants.PARTITION_KEY);
+        if (partition != null && !partition.isEmpty()) {
+            return partition;
+        }
+        return AzureTableConstants.DEFAULT_PARTITION;
     }
 
     private Properties getClientSpecificProperties() {

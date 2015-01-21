@@ -1,5 +1,7 @@
 package it.polimi.kundera.client.azuretable;
 
+import it.polimi.kundera.client.azuretable.config.AzureTableConstants;
+
 /**
  * Aggregate partition key and row key into a single object.
  *
@@ -30,11 +32,16 @@ public class AzureTableKey {
             throw new NullPointerException("key cannot be null");
         }
         String[] parts = rawKey.split(SEPARATOR);
-        if (parts.length != KEY_PARTS) {
+        if (parts.length > KEY_PARTS) {
             throw new IllegalArgumentException("key [" + rawKey + "], is malformed and cannot be parsed");
         }
-        this.partitionKey = parts[0];
-        this.rowKey = parts[1];
+        if (parts.length == 1) {
+            this.partitionKey = AzureTableConstants.getPartitionKey();
+            this.rowKey = parts[0];
+        } else {
+            this.partitionKey = parts[0];
+            this.rowKey = parts[1];
+        }
     }
 
     public String getRowKey() {
@@ -55,6 +62,21 @@ public class AzureTableKey {
      */
     public static String asString(String partitionKey, String rowKey) {
         return new AzureTableKey(partitionKey, rowKey).toString();
+    }
+
+    /**
+     * Helper method to generate a String key given row key.
+     * The partition key is set to the default one.
+     * <p/>
+     * Default partition key can be set through Azure Table specific properties
+     * using the property name 'table.partition.default' in the xml file.
+     *
+     * @param rowKey the row key
+     *
+     * @return a string representation of the whole key
+     */
+    public static String asString(String rowKey) {
+        return new AzureTableKey(AzureTableConstants.getPartitionKey(), rowKey).toString();
     }
 
     /**

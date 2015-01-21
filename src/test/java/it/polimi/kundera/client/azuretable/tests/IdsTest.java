@@ -2,6 +2,7 @@ package it.polimi.kundera.client.azuretable.tests;
 
 import com.impetus.kundera.KunderaException;
 import it.polimi.kundera.client.azuretable.AzureTableKey;
+import it.polimi.kundera.client.azuretable.config.AzureTableConstants;
 import it.polimi.kundera.client.azuretable.entities.Phone;
 import it.polimi.kundera.client.azuretable.entities.PhoneInvalid1;
 import it.polimi.kundera.client.azuretable.entities.PhoneInvalid2;
@@ -23,6 +24,7 @@ public class IdsTest extends TestBase {
         phone.setNumber(123456789L);
         em.persist(phone);
         Assert.assertNotNull(phone.getId());
+        Assert.assertTrue(phone.getId().startsWith(AzureTableConstants.getPartitionKey() + "_"));
 
         String phnId = phone.getId();
         clear();
@@ -53,14 +55,14 @@ public class IdsTest extends TestBase {
 
     @Test
     public void userStringIdTest() {
-        print("user string id");
-        String id = AzureTableKey.asString("phone", "1");
+        print("user string id with utils");
+        String id = AzureTableKey.asString("1", "phone");
         PhoneString phone = new PhoneString();
         phone.setNumber(123456789L);
         phone.setId(id);
         em.persist(phone);
         Assert.assertNotNull(phone.getId());
-        Assert.assertEquals(id, phone.getId());
+        Assert.assertEquals("1_phone", phone.getId());
 
         clear();
 
@@ -77,6 +79,40 @@ public class IdsTest extends TestBase {
         clear();
 
         TypedQuery<PhoneString> query = em.createQuery("SELECT p FROM PhoneString p WHERE p.id = :id", PhoneString.class);
+        foundPhone = query.setParameter("id", id).getSingleResult();
+        Assert.assertNotNull(foundPhone);
+        Assert.assertEquals(id, foundPhone.getId());
+        Assert.assertEquals((Long) 987654321L, foundPhone.getNumber());
+
+        print("delete");
+        em.remove(foundPhone);
+        foundPhone = em.find(PhoneString.class, id);
+        Assert.assertNull(foundPhone);
+
+        print("user string id without utils");
+        id = "123456_phone1";
+        phone = new PhoneString();
+        phone.setNumber(123456789L);
+        phone.setId(id);
+        em.persist(phone);
+        Assert.assertNotNull(phone.getId());
+        Assert.assertEquals("123456_phone1", phone.getId());
+
+        clear();
+
+        print("read");
+        foundPhone = em.find(PhoneString.class, id);
+        Assert.assertNotNull(foundPhone);
+        Assert.assertEquals(id, foundPhone.getId());
+        Assert.assertEquals((Long) 123456789L, foundPhone.getNumber());
+
+        print("update");
+        foundPhone.setNumber(987654321L);
+        em.merge(foundPhone);
+
+        clear();
+
+        query = em.createQuery("SELECT p FROM PhoneString p WHERE p.id = :id", PhoneString.class);
         foundPhone = query.setParameter("id", id).getSingleResult();
         Assert.assertNotNull(foundPhone);
         Assert.assertEquals(id, foundPhone.getId());

@@ -16,6 +16,18 @@ public class AzureTableConstants {
 
     public static final String PROTOCOL = "table.protocol";
 
+    public static final String PARTITION_KEY = "table.partition.default";
+    public static final String DEFAULT_PARTITION = "DEFAULT";
+    private static String partitionKey;
+
     private AzureTableConstants() {
+    }
+
+    public static void setPartitionKey(String partitionKey) {
+        AzureTableConstants.partitionKey = partitionKey;
+    }
+
+    public static String getPartitionKey() {
+        return partitionKey;
     }
 }
