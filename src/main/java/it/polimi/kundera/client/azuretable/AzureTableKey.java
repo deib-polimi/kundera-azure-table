@@ -9,7 +9,7 @@ import it.polimi.kundera.client.azuretable.config.AzureTableConstants;
  */
 public class AzureTableKey {
 
-    public static final int KEY_PARTS = 2;
+    public static final int MAX_KEY_PARTS = 2;
     public static final String SEPARATOR = "_";
     private String rowKey;
     private String partitionKey;
@@ -32,7 +32,7 @@ public class AzureTableKey {
             throw new NullPointerException("key cannot be null");
         }
         String[] parts = rawKey.split(SEPARATOR);
-        if (parts.length > KEY_PARTS) {
+        if (parts.length == 0 || parts.length > MAX_KEY_PARTS) {
             throw new IllegalArgumentException("key [" + rawKey + "], is malformed and cannot be parsed");
         }
         if (parts.length == 1) {
