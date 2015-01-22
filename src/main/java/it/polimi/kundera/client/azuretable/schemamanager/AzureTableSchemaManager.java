@@ -127,11 +127,10 @@ public class AzureTableSchemaManager extends AbstractSchemaManager implements Sc
     }
 
     /*
-     * drops (if exists) schema and then creates schema tables based on entity definitions.
+     * creates schema tables based on entity definitions.
      */
     @Override
     protected void create(List<TableInfo> tableInfo) {
-        dropSchema();
         for (TableInfo info : tableInfo) {
             try {
                 CloudTable table = tableClient.getTableReference(info.getTableName());
@@ -144,10 +143,11 @@ public class AzureTableSchemaManager extends AbstractSchemaManager implements Sc
     }
 
     /*
-     * drops (if exists) schema, creates schema tables based on entity definitions.
+     * drops (if exists) schema, then creates schema tables based on entity definitions.
      */
     @Override
     protected void create_drop(List<TableInfo> tableInfo) {
+        dropSchema();
         create(tableInfo);
     }
 
