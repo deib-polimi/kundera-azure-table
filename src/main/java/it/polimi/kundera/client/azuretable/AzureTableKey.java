@@ -105,6 +105,9 @@ public class AzureTableKey {
 
     @Override
     public String toString() {
+        if (partitionKey.equals(AzureTableConstants.getPartitionKey())) {
+            return rowKey;
+        }
         return partitionKey + SEPARATOR + rowKey;
     }
 }

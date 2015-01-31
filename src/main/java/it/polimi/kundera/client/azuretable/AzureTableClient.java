@@ -21,7 +21,6 @@ import com.impetus.kundera.property.PropertyAccessorHelper;
 import com.impetus.kundera.property.accessor.EnumAccessor;
 import com.microsoft.windowsazure.services.core.storage.StorageException;
 import com.microsoft.windowsazure.services.table.client.*;
-import it.polimi.kundera.client.azuretable.config.AzureTableConstants;
 import it.polimi.kundera.client.azuretable.query.AzureTableQuery;
 import it.polimi.kundera.client.azuretable.query.QueryBuilder;
 import org.slf4j.Logger;
@@ -80,10 +79,8 @@ public class AzureTableClient extends ClientBase implements Client<AzureTableQue
 
     @Override
     public Object generate() {
-        String partitionKey = AzureTableConstants.getPartitionKey();
-        String rowKey = UUID.randomUUID().toString();
-        // return string representation since Kundera does not support AzureTableKey as data type
-        return AzureTableKey.asString(partitionKey, rowKey);
+        // return a random UUID as row key, the partition key is implicitly the default one.
+        return UUID.randomUUID().toString();
     }
 
     /*---------------------------------------------------------------------------------*/
@@ -156,7 +153,7 @@ public class AzureTableClient extends ClientBase implements Client<AzureTableQue
         Object embeddedObj = PropertyAccessorHelper.getObject(entity, field);
         logger.debug("field = [" + field.getName() + "], jpaColumnName = [" + jpaColumnName + "], embeddedObj = [" + embeddedObj + "]");
 
-        //embedded objects are not supported by AzureTable, they must be serialized
+        //embedded objects are not supported by AzureTable, they must be deeply serialized
         try {
             EmbeddedEntity embeddedEntity = new EmbeddedEntity();
             EmbeddableType embeddable = metamodel.embeddable(((AbstractAttribute) attribute).getBindableJavaType());
