@@ -24,12 +24,12 @@ User can define IDs both with or without partition key.
 
 Please take as reference the naming [constraints](https://msdn.microsoft.com/library/azure/dd179338.aspx) from Azure Table documentation.
 
-####Define both row key and partition key
+###Define both row key and partition key
 This can be done in two ways:
 - using `AzureTableKey.asString` method by passing both _partition key_ and _row key_ to obtain a string representation of the whole key and assign it to the entity ID field before persist.
 - manually define the entity ID before persist the entity, the string must follow the pattern `partitionKey_rowKey`.
 
-####Define only the row key
+###Define only the row key
 If only the row key is defined, the _partition key_ is implicitly the default one (which can be set in a [datastore specific properties file](#datastore-specific-properties)).
 
 There are three ways to do this:
@@ -63,7 +63,7 @@ More details on the operator supported by Azure Tables can be found in the [offi
 
 ##Configuration
 
-####persistence.xml
+###persistence.xml
 The configuration is done in the persistence.xml file, the properties to be specified inside the `<properties>` tag are:
 
 - `kundera.username` __required__, the storage account name (from azure portal)
@@ -74,7 +74,7 @@ The configuration is done in the persistence.xml file, the properties to be spec
   - `create-drop` which drop the schema (if exists) and creates it
 - `kundera.client.property` _optional_, the name of the xml file containing the datastore specific properties.
 
-####Datastore specific properties
+###Datastore specific properties
 A file with client specific properties can be created and placed inside the classpath, you need to specify its name in the persistence.xml file.
 
 the skeleton of the file is the following:
