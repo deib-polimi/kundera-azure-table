@@ -1,26 +1,26 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <clientProperties>
-    <datastores>
-        <dataStore>
-            <name>azure-table</name>
-            <connection>
-                <properties>
-                    <!--
-                        optional, if present and value is true storage emulator is used.
-                        note: using dev server, kundera.username and kundera.password in persistence xml are ignored
-                    -->
-                    <property name="table.emulator" value="true"></property>
-                    <!-- optional, if using storage emulator set the value for a http proxy (default to localhost) -->
-                    <property name="table.emulator.proxy" value="http://127.0.0.1"></property>
+	<datastores>
+		<dataStore>
+			<name>azure-table</name>
+			<connection>
+				<properties>
+					<!--
+						optional, if present and value is true storage emulator is used.
+						note: using dev server, kundera.username and kundera.password in persistence xml are ignored
+					-->
+					<property name="table.emulator" value="true"></property>
+					<!-- optional, if using storage emulator set the value for a http proxy (default to localhost) -->
+					<property name="table.emulator.proxy" value="http://127.0.0.1"></property>
 
-                    <!-- optional, default is 'DEFAULT' -->
-                    <property name="table.partition.default" value="DEFAULT"></property>
-                    <!--
-                        optional, protocol to be used within requests http or https (default is https)
-                        <property name="table.protocol" value="http"></property>
-                    -->
-                </properties>
-            </connection>
-        </dataStore>
-    </datastores>
+					<!-- optional, default is 'DEFAULT' -->
+					<property name="table.partition.default" value="DEFAULT"></property>
+					<!--
+						optional, protocol to be used within requests http or https (default is https)
+						<property name="table.protocol" value="http"></property>
+					-->
+				</properties>
+			</connection>
+		</dataStore>
+	</datastores>
 </clientProperties>
