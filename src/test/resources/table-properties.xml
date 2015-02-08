@@ -15,10 +15,9 @@
 
 					<!-- optional, default is 'DEFAULT' -->
 					<property name="table.partition.default" value="DEFAULT"></property>
-					<!--
-						optional, protocol to be used within requests http or https (default is https)
-						<property name="table.protocol" value="http"></property>
-					-->
+
+					<!-- optional, protocol to be used within requests http or https (default is https) -->
+					<property name="table.protocol" value="https"></property>
 				</properties>
 			</connection>
 		</dataStore>

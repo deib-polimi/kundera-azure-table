@@ -97,7 +97,7 @@ public class AzureTableSchemaManager extends AbstractSchemaManager implements Sc
             // use storage emulator
             storageConnectionString = "UseDevelopmentStorage=true;DevelopmentStorageProxyUri=" + AzureTableConstants.LOCALHOST;
         } else {
-            storageConnectionString = "DefaultEndpointsProtocol=" + AzureTableConstants.HTTP + ";AccountName=" + this.userName + ";AccountKey=" + this.password;
+            storageConnectionString = "DefaultEndpointsProtocol=" + AzureTableConstants.HTTPS + ";AccountName=" + this.userName + ";AccountKey=" + this.password;
         }
 
         try {
@@ -148,6 +148,9 @@ public class AzureTableSchemaManager extends AbstractSchemaManager implements Sc
     @Override
     protected void create_drop(List<TableInfo> tableInfo) {
         dropSchema();
+        // TODO fix
+        // drop schema and then recreating it can cause 'Conflict' error since tables are deleted asynchronously
+        // and the create request can occur while the deleted table still exists.
         create(tableInfo);
     }
 
