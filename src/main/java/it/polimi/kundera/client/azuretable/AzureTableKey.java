@@ -103,6 +103,28 @@ public class AzureTableKey {
         return new AzureTableKey(key).getRowKey();
     }
 
+    /**
+     * Returns the string representation of the key.
+     * <p/>
+     * If {@code fill} is {@code true} the full string representation is returned that is the row key and
+     * the partition key, even if the partition key is the default one
+     * (should be used when persisting into relationships).
+     * If {@code fill} is {@code false} tha simple representation is returned that is the row key and
+     * the partition key iff is not the default one, the default partition key is left implicit.
+     * <p/>
+     * Note that calling toString(false) is perfectly equals to calling simply toString().
+     *
+     * @param full true if want the full representation of the key
+     *
+     * @return the key string representation
+     */
+    public String toString(boolean full) {
+        if (full) {
+            return partitionKey + SEPARATOR + rowKey;
+        }
+        return toString();
+    }
+
     @Override
     public String toString() {
         if (partitionKey.equals(AzureTableConstants.getPartitionKey())) {

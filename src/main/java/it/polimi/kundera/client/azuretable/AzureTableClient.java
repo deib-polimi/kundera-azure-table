@@ -190,8 +190,8 @@ public class AzureTableClient extends ClientBase implements Client<AzureTableQue
                 if (jpaColumnName != null && targetId != null) {
                     // pass through AzureTableKey just for validation
                     AzureTableKey targetKey = new AzureTableKey(targetId.toString());
-                    logger.debug("field = [" + fieldName + "], jpaColumnName = [" + jpaColumnName + "], targetKey = [" + targetKey.toString() + "]");
-                    AzureTableUtils.setPropertyHelper(tableEntity, jpaColumnName, targetKey.toString());
+                    logger.debug("field = [" + fieldName + "], jpaColumnName = [" + jpaColumnName + "], targetKey = [" + targetKey.toString(true) + "]");
+                    AzureTableUtils.setPropertyHelper(tableEntity, jpaColumnName, targetKey.toString(true));
                 }
             }
         }
@@ -230,12 +230,15 @@ public class AzureTableClient extends ClientBase implements Client<AzureTableQue
         Map<Object, Set<Object>> joinTableRecords = joinTableData.getJoinTableRecords();
 
         for (Object owner : joinTableRecords.keySet()) {
+            AzureTableKey ownerKey = new AzureTableKey(owner.toString());
             Set<Object> children = joinTableRecords.get(owner);
+            AzureTableKey childKey;
             for (Object child : children) {
-                // partition key is joinTableName, row key is random generated
+                childKey = new AzureTableKey(child.toString());
+                // partition key is the table name, row key is random generated
                 DynamicEntity tableEntity = new DynamicEntity(joinTableName, UUID.randomUUID().toString());
-                AzureTableUtils.setPropertyHelper(tableEntity, joinColumnName, owner);
-                AzureTableUtils.setPropertyHelper(tableEntity, inverseJoinColumnName, child);
+                AzureTableUtils.setPropertyHelper(tableEntity, joinColumnName, ownerKey.toString(true));
+                AzureTableUtils.setPropertyHelper(tableEntity, inverseJoinColumnName, childKey.toString(true));
 
                 try {
                     CloudTable joinTable = tableClient.getTableReference(joinTableName);
@@ -462,7 +465,8 @@ public class AzureTableClient extends ClientBase implements Client<AzureTableQue
         EntityMetadata entityMetadata = KunderaMetadataManager.getEntityMetadata(kunderaMetadata, entityClass);
         String tableName = entityMetadata.getTableName();
 
-        TableQuery<DynamicEntity> query = generateRelationQuery(tableName, colName, colValue.toString());
+        AzureTableKey colValueKey = new AzureTableKey(colValue.toString());
+        TableQuery<DynamicEntity> query = generateRelationQuery(tableName, colName, colValueKey.toString(true));
         List<Object> results = new ArrayList<>();
         for (DynamicEntity entity : tableClient.execute(query)) {
             String entityKey = AzureTableKey.asString(entity.getPartitionKey(), entity.getRowKey());
@@ -480,13 +484,14 @@ public class AzureTableClient extends ClientBase implements Client<AzureTableQue
      *      select PROJECT_ID (columnName) from EMPLOYEE_PROJECT (tableName)
      *      where EMPLOYEE_ID (pKeyColumnName) equals (pKeyColumnValue)
      *
-     * note: pKeyColumnValue and columnName should be string representation of AzureTableKey(s)
+     * note: pKeyColumnValue and columnName should be string representation of AzureTableKey
      */
     @Override
     public <E> List<E> getColumnsById(String schemaName, String tableName, String pKeyColumnName, String columnName, Object pKeyColumnValue, Class columnJavaType) {
         logger.debug("schemaName = [" + schemaName + "], tableName = [" + tableName + "], pKeyColumnName = [" + pKeyColumnName + "], columnName = [" + columnName + "], pKeyColumnValue = [" + pKeyColumnValue + "], columnJavaType = [" + columnJavaType + "]");
 
-        TableQuery<DynamicEntity> query = generateRelationQuery(tableName, pKeyColumnName, pKeyColumnValue.toString());
+        AzureTableKey pKeyColumnValueKey = new AzureTableKey(pKeyColumnValue.toString());
+        TableQuery<DynamicEntity> query = generateRelationQuery(tableName, pKeyColumnName, pKeyColumnValueKey.toString(true));
         List<E> results = new ArrayList<>();
         logger.debug(columnName + " for " + pKeyColumnName + "[" + pKeyColumnValue + "]:");
         for (DynamicEntity entity : tableClient.execute(query)) {
@@ -511,7 +516,8 @@ public class AzureTableClient extends ClientBase implements Client<AzureTableQue
     public Object[] findIdsByColumn(String schemaName, String tableName, String pKeyName, String columnName, Object columnValue, Class entityClazz) {
         logger.debug("schemaName = [" + schemaName + "], tableName = [" + tableName + "], pKeyName = [" + pKeyName + "], columnName = [" + columnName + "], columnValue = [" + columnValue + "], entityClazz = [" + entityClazz + "]");
 
-        TableQuery<DynamicEntity> query = generateRelationQuery(tableName, columnName, columnValue.toString());
+        AzureTableKey columnValueKey = new AzureTableKey(columnValue.toString());
+        TableQuery<DynamicEntity> query = generateRelationQuery(tableName, columnName, columnValueKey.toString(true));
         List<Object> results = new ArrayList<>();
         logger.debug(pKeyName + " for " + columnName + "[" + columnValue + "]:");
         for (DynamicEntity entity : tableClient.execute(query)) {
@@ -556,7 +562,8 @@ public class AzureTableClient extends ClientBase implements Client<AzureTableQue
     public void deleteByColumn(String schemaName, String tableName, String columnName, Object columnValue) {
         logger.debug("schemaName = [" + schemaName + "], tableName = [" + tableName + "], columnName = [" + columnName + "], columnValue = [" + columnValue + "]");
 
-        TableQuery<DynamicEntity> query = generateRelationQuery(tableName, columnName, columnValue.toString());
+        AzureTableKey columnValueKey = new AzureTableKey(columnValue.toString());
+        TableQuery<DynamicEntity> query = generateRelationQuery(tableName, columnName, columnValueKey.toString(true));
         for (DynamicEntity entity : tableClient.execute(query)) {
             try {
                 TableOperation deleteOperation = TableOperation.delete(entity);

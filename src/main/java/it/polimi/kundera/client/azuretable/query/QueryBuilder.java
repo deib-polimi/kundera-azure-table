@@ -163,7 +163,7 @@ public class QueryBuilder {
         if (entityType.getAttribute(filedName).isAssociation()) {
             /* filter on related entity */
             AzureTableKey key = new AzureTableKey(filterValue.toString());
-            return TableQuery.generateFilterCondition(property, operator, key.toString());
+            return TableQuery.generateFilterCondition(property, operator, key.toString(true));
         }
         if (property.equals(idColumnName)) {
             /* filter on entity ID */
