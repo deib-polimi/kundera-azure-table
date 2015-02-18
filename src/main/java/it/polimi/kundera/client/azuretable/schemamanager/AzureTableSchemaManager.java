@@ -144,13 +144,13 @@ public class AzureTableSchemaManager extends AbstractSchemaManager implements Sc
 
     /*
      * drops (if exists) schema, then creates schema tables based on entity definitions.
+     *
+     * drop schema and then recreating it can cause 'Conflict' error since tables are deleted asynchronously
+     * and the create request can occur while the deleted table still exists.
      */
     @Override
     protected void create_drop(List<TableInfo> tableInfo) {
         dropSchema();
-        // TODO fix
-        // drop schema and then recreating it can cause 'Conflict' error since tables are deleted asynchronously
-        // and the create request can occur while the deleted table still exists.
         create(tableInfo);
     }
 
