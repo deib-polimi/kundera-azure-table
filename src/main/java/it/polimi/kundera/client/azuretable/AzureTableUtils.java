@@ -35,21 +35,22 @@ public class AzureTableUtils {
         if (!(idClazz.equals(String.class))) {
             throw new KunderaException("Id attribute must be of type " + String.class);
         }
-        return createDynamicEntity((String) id);
+        return createDynamicEntity(entityMetadata.getTableName(), (String) id);
     }
 
     /**
      * Generate a {@link DynamicEntity}.
      *
-     * @param id string representation of {@link AzureTableKey}.
+     * @param tableName the table name
+     * @param id        string representation of {@link it.polimi.kundera.client.azuretable.AzureTableKey}.
      *
      * @return a fresh new  {@link DynamicEntity}
      *
      * @see AzureTableKey
      * @see DynamicEntity
      */
-    public static DynamicEntity createDynamicEntity(String id) {
-        AzureTableKey key = new AzureTableKey(id);
+    public static DynamicEntity createDynamicEntity(String tableName, String id) {
+        AzureTableKey key = new AzureTableKey(tableName, id);
         return new DynamicEntity(key.getPartitionKey(), key.getRowKey());
     }
 

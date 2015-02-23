@@ -1,8 +1,11 @@
 package it.polimi.kundera.client.azuretable.query;
 
 import com.impetus.kundera.KunderaException;
+import com.impetus.kundera.metadata.KunderaMetadataManager;
 import com.impetus.kundera.metadata.model.EntityMetadata;
+import com.impetus.kundera.metadata.model.Relation;
 import com.impetus.kundera.metadata.model.attributes.AbstractAttribute;
+import com.impetus.kundera.persistence.EntityManagerFactoryImpl;
 import com.impetus.kundera.query.KunderaQuery;
 import com.microsoft.windowsazure.services.table.client.TableQuery;
 import it.polimi.kundera.client.azuretable.AzureTableKey;
@@ -26,9 +29,11 @@ public class QueryBuilder {
     private TableQuery<DynamicEntity> query;
     private final EntityType entityType;
     private final EntityMetadata entityMetadata;
+    private final EntityManagerFactoryImpl.KunderaMetadata kunderaMetadata;
     private boolean holdRelationships;
 
-    public QueryBuilder(EntityMetadata entityMetadata, EntityType entityType, boolean holdRelationships) {
+    public QueryBuilder(EntityManagerFactoryImpl.KunderaMetadata kunderaMetadata, EntityMetadata entityMetadata, EntityType entityType, boolean holdRelationships) {
+        this.kunderaMetadata = kunderaMetadata;
         this.entityType = entityType;
         this.entityMetadata = entityMetadata;
         this.holdRelationships = holdRelationships;
@@ -162,12 +167,15 @@ public class QueryBuilder {
         String filedName = entityMetadata.getFieldName(property);
         if (entityType.getAttribute(filedName).isAssociation()) {
             /* filter on related entity */
-            AzureTableKey key = new AzureTableKey(filterValue.toString());
+            Relation relation = entityMetadata.getRelation(filedName);
+            Class targetEntityClass = relation.getTargetEntity();
+            EntityMetadata targetEntityMetadata = KunderaMetadataManager.getEntityMetadata(kunderaMetadata, targetEntityClass);
+            AzureTableKey key = new AzureTableKey(targetEntityMetadata.getTableName(), filterValue.toString());
             return TableQuery.generateFilterCondition(property, operator, key.toString(true));
         }
         if (property.equals(idColumnName)) {
             /* filter on entity ID */
-            AzureTableKey key = new AzureTableKey(filterValue.toString());
+            AzureTableKey key = new AzureTableKey(entityMetadata.getTableName(), filterValue.toString());
             return generateKeyFilter(key);
         }
         /* filter on entity filed */

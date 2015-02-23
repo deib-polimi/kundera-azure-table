@@ -48,6 +48,8 @@ public class AzureTableClient extends ClientBase implements Client<AzureTableQue
     private EntityReader reader;
     private CloudTableClient tableClient;
     private static final Logger logger = LoggerFactory.getLogger(AzureTableClient.class);
+    private Map<String, String> ownerJoinTableMap;
+    private Map<String, String> inverseJoinTableMap;
 
     protected AzureTableClient(final KunderaMetadata kunderaMetadata, Map<String, Object> properties,
                                String persistenceUnit, final ClientMetadata clientMetadata, IndexManager indexManager,
@@ -57,6 +59,43 @@ public class AzureTableClient extends ClientBase implements Client<AzureTableQue
         this.tableClient = tableClient;
         this.indexManager = indexManager;
         this.clientMetadata = clientMetadata;
+        this.ownerJoinTableMap = new HashMap<>();
+        this.inverseJoinTableMap = new HashMap<>();
+    }
+
+    private String getOwnerJoinTableName(String joinTableName) {
+        if (this.ownerJoinTableMap.get(joinTableName) == null) {
+            fillMetadataForJoinTable(joinTableName);
+        }
+        return this.ownerJoinTableMap.get(joinTableName);
+    }
+
+    private String getInverseJoinTableName(String joinTableName) {
+        if (this.inverseJoinTableMap.get(joinTableName) == null) {
+            fillMetadataForJoinTable(joinTableName);
+        }
+        return this.inverseJoinTableMap.get(joinTableName);
+    }
+
+    private void fillMetadataForJoinTable(String joinTableName) {
+        MetamodelImpl metamodel = KunderaMetadataManager.getMetamodel(kunderaMetadata, persistenceUnit);
+        Map<String, Class<?>> entityNameToClassMap = metamodel.getEntityNameToClassMap();
+        for (String entityName : entityNameToClassMap.keySet()) {
+            EntityMetadata entityMetadata = metamodel.getEntityMetadata(entityNameToClassMap.get(entityName));
+            if (entityMetadata.isRelationViaJoinTable()) {
+                for (Relation r : entityMetadata.getRelations()) {
+                    if (r.isRelatedViaJoinTable() && r.getJoinTableMetadata().getJoinTableName().equals(joinTableName)) {
+                        this.ownerJoinTableMap.put(joinTableName, entityMetadata.getTableName());
+                        logger.warn("joinColumnTable: " + entityMetadata.getTableName());
+                        this.inverseJoinTableMap.put(joinTableName, metamodel.getEntityMetadata(r.getTargetEntity()).getTableName());
+                        logger.warn("inverseJoinColumnTable: " + metamodel.getEntityMetadata(r.getTargetEntity()).getTableName());
+                    }
+                }
+            }
+        }
+        if (this.ownerJoinTableMap.get(joinTableName) == null || this.inverseJoinTableMap.get(joinTableName) == null) {
+            throw new KunderaException("Failed to determine table names for participants in join table [" + joinTableName + "]");
+        }
     }
 
     @Override
@@ -185,11 +224,13 @@ public class AzureTableClient extends ClientBase implements Client<AzureTableQue
             for (RelationHolder rh : rlHolders) {
                 String jpaColumnName = rh.getRelationName();
                 String fieldName = entityMetadata.getFieldName(jpaColumnName);
+                Relation relation = entityMetadata.getRelation(fieldName);
                 Object targetId = rh.getRelationValue();
 
-                if (jpaColumnName != null && targetId != null) {
+                if (relation != null && jpaColumnName != null && targetId != null) {
                     // pass through AzureTableKey just for validation
-                    AzureTableKey targetKey = new AzureTableKey(targetId.toString());
+                    EntityMetadata targetMetadata = KunderaMetadataManager.getEntityMetadata(kunderaMetadata, relation.getTargetEntity());
+                    AzureTableKey targetKey = new AzureTableKey(targetMetadata.getTableName(), targetId.toString());
                     logger.debug("field = [" + fieldName + "], jpaColumnName = [" + jpaColumnName + "], targetKey = [" + targetKey.toString(true) + "]");
                     AzureTableUtils.setPropertyHelper(tableEntity, jpaColumnName, targetKey.toString(true));
                 }
@@ -229,12 +270,15 @@ public class AzureTableClient extends ClientBase implements Client<AzureTableQue
         String inverseJoinColumnName = joinTableData.getInverseJoinColumnName();
         Map<Object, Set<Object>> joinTableRecords = joinTableData.getJoinTableRecords();
 
+        String joinColumnTable = getOwnerJoinTableName(joinTableName);
+        String inverseJoinColumnTable = getInverseJoinTableName(joinTableName);
+
         for (Object owner : joinTableRecords.keySet()) {
-            AzureTableKey ownerKey = new AzureTableKey(owner.toString());
+            AzureTableKey ownerKey = new AzureTableKey(joinColumnTable, owner.toString());
             Set<Object> children = joinTableRecords.get(owner);
             AzureTableKey childKey;
             for (Object child : children) {
-                childKey = new AzureTableKey(child.toString());
+                childKey = new AzureTableKey(inverseJoinColumnTable, child.toString());
                 // partition key is the table name, row key is random generated
                 DynamicEntity tableEntity = new DynamicEntity(joinTableName, UUID.randomUUID().toString());
                 AzureTableUtils.setPropertyHelper(tableEntity, joinColumnName, ownerKey.toString(true));
@@ -268,8 +312,8 @@ public class AzureTableClient extends ClientBase implements Client<AzureTableQue
         logger.debug("entityClass = [" + entityClass.getSimpleName() + "], id = [" + id + "]");
 
         try {
-            AzureTableKey key = new AzureTableKey(id.toString());
             EntityMetadata entityMetadata = KunderaMetadataManager.getEntityMetadata(kunderaMetadata, entityClass);
+            AzureTableKey key = new AzureTableKey(entityMetadata.getTableName(), id.toString());
             DynamicEntity tableEntity = get(entityMetadata.getTableName(), key);
             if (tableEntity == null) {
                 /* case not found */
@@ -334,10 +378,9 @@ public class AzureTableClient extends ClientBase implements Client<AzureTableQue
 
     private void initializeID(DynamicEntity tableEntity, EntityMetadata entityMetadata, Object entity) {
         String jpaColumnName = ((AbstractAttribute) entityMetadata.getIdAttribute()).getJPAColumnName();
-        String pKey = AzureTableKey.asString(tableEntity.getPartitionKey(), tableEntity.getRowKey());
 
-        logger.debug("jpaColumnName = [" + jpaColumnName + "], fieldValue = [" + pKey + "]");
-        PropertyAccessorHelper.setId(entity, entityMetadata, pKey);
+        logger.debug("jpaColumnName = [" + jpaColumnName + "], fieldValue = [" + tableEntity.getRowKey() + "]");
+        PropertyAccessorHelper.setId(entity, entityMetadata, tableEntity.getRowKey());
     }
 
     private void initializeAttribute(DynamicEntity tableEntity, Object entity, Attribute attribute) {
@@ -410,10 +453,10 @@ public class AzureTableClient extends ClientBase implements Client<AzureTableQue
         EntityProperty entityProperty = tableEntity.getProperties().get(jpaColumnName);
 
         if (jpaColumnName != null && entityProperty != null) {
-            Object fieldValue = entityProperty.getValueAsString();
-            logger.debug("jpaColumnName = [" + jpaColumnName + "], fieldValue = [" + fieldValue + "]");
+            AzureTableKey targetKey = new AzureTableKey(entityProperty.getValueAsString());
+            logger.debug("jpaColumnName = [" + jpaColumnName + "], fieldValue = [" + targetKey + "]");
             // field value is a string representation of an AzureTableKey
-            relationMap.put(jpaColumnName, fieldValue);
+            relationMap.put(jpaColumnName, targetKey.getRowKey());
         }
     }
 
@@ -465,12 +508,16 @@ public class AzureTableClient extends ClientBase implements Client<AzureTableQue
         EntityMetadata entityMetadata = KunderaMetadataManager.getEntityMetadata(kunderaMetadata, entityClass);
         String tableName = entityMetadata.getTableName();
 
-        AzureTableKey colValueKey = new AzureTableKey(colValue.toString());
+        String fieldName = entityMetadata.getFieldName(colName);
+        Relation relation = entityMetadata.getRelation(fieldName);
+        EntityMetadata targetMetadata = KunderaMetadataManager.getEntityMetadata(kunderaMetadata, relation.getTargetEntity());
+        String targetTableName = targetMetadata.getTableName();
+        AzureTableKey colValueKey = new AzureTableKey(targetTableName, colValue.toString());
+
         TableQuery<DynamicEntity> query = generateRelationQuery(tableName, colName, colValueKey.toString(true));
         List<Object> results = new ArrayList<>();
         for (DynamicEntity entity : tableClient.execute(query)) {
-            String entityKey = AzureTableKey.asString(entity.getPartitionKey(), entity.getRowKey());
-            results.add(find(entityClass, entityKey));
+            results.add(find(entityClass, entity.getRowKey()));
         }
         return results;
     }
@@ -490,13 +537,15 @@ public class AzureTableClient extends ClientBase implements Client<AzureTableQue
     public <E> List<E> getColumnsById(String schemaName, String tableName, String pKeyColumnName, String columnName, Object pKeyColumnValue, Class columnJavaType) {
         logger.debug("schemaName = [" + schemaName + "], tableName = [" + tableName + "], pKeyColumnName = [" + pKeyColumnName + "], columnName = [" + columnName + "], pKeyColumnValue = [" + pKeyColumnValue + "], columnJavaType = [" + columnJavaType + "]");
 
-        AzureTableKey pKeyColumnValueKey = new AzureTableKey(pKeyColumnValue.toString());
+        String joinColumnTable = getOwnerJoinTableName(tableName);
+        AzureTableKey pKeyColumnValueKey = new AzureTableKey(joinColumnTable, pKeyColumnValue.toString());
         TableQuery<DynamicEntity> query = generateRelationQuery(tableName, pKeyColumnName, pKeyColumnValueKey.toString(true));
         List<E> results = new ArrayList<>();
         logger.debug(columnName + " for " + pKeyColumnName + "[" + pKeyColumnValue + "]:");
         for (DynamicEntity entity : tableClient.execute(query)) {
-            logger.debug("\t" + entity.getProperty(columnName).getValueAsString());
-            results.add((E) entity.getProperty(columnName).getValueAsString());
+            AzureTableKey targetKey = new AzureTableKey(entity.getProperty(columnName).getValueAsString());
+            logger.debug("\t" + targetKey.getRowKey());
+            results.add((E) targetKey.getRowKey());
         }
         return results;
     }
@@ -516,14 +565,15 @@ public class AzureTableClient extends ClientBase implements Client<AzureTableQue
     public Object[] findIdsByColumn(String schemaName, String tableName, String pKeyName, String columnName, Object columnValue, Class entityClazz) {
         logger.debug("schemaName = [" + schemaName + "], tableName = [" + tableName + "], pKeyName = [" + pKeyName + "], columnName = [" + columnName + "], columnValue = [" + columnValue + "], entityClazz = [" + entityClazz + "]");
 
-        AzureTableKey columnValueKey = new AzureTableKey(columnValue.toString());
+        String inverseJoinColumnTable = getInverseJoinTableName(tableName);
+        AzureTableKey columnValueKey = new AzureTableKey(inverseJoinColumnTable, columnValue.toString());
         TableQuery<DynamicEntity> query = generateRelationQuery(tableName, columnName, columnValueKey.toString(true));
         List<Object> results = new ArrayList<>();
         logger.debug(pKeyName + " for " + columnName + "[" + columnValue + "]:");
         for (DynamicEntity entity : tableClient.execute(query)) {
-            // pKeyName should be a string representation of AzureTableKey
-            logger.debug("\t" + entity.getProperty(pKeyName).getValueAsString());
-            results.add(entity.getProperty(pKeyName).getValueAsString());
+            AzureTableKey targetKey = new AzureTableKey(entity.getProperty(pKeyName).getValueAsString());
+            logger.debug("\t" + targetKey.getRowKey());
+            results.add(targetKey.getRowKey());
         }
         return results.toArray();
     }
@@ -537,8 +587,8 @@ public class AzureTableClient extends ClientBase implements Client<AzureTableQue
         logger.debug("entity = [" + entity + "], pKey = [" + pKey + "]");
 
         // pass through AzureTableKey just for validation
-        AzureTableKey key = new AzureTableKey(pKey.toString());
         EntityMetadata entityMetadata = KunderaMetadataManager.getEntityMetadata(kunderaMetadata, entity.getClass());
+        AzureTableKey key = new AzureTableKey(entityMetadata.getTableName(), pKey.toString());
         try {
             DynamicEntity tableEntity = get(entityMetadata.getTableName(), key);
             TableOperation deleteOperation = TableOperation.delete(tableEntity);
@@ -562,8 +612,7 @@ public class AzureTableClient extends ClientBase implements Client<AzureTableQue
     public void deleteByColumn(String schemaName, String tableName, String columnName, Object columnValue) {
         logger.debug("schemaName = [" + schemaName + "], tableName = [" + tableName + "], columnName = [" + columnName + "], columnValue = [" + columnValue + "]");
 
-        AzureTableKey columnValueKey = new AzureTableKey(columnValue.toString());
-        TableQuery<DynamicEntity> query = generateRelationQuery(tableName, columnName, columnValueKey.toString(true));
+        TableQuery<DynamicEntity> query = generateRelationQuery(tableName, columnName, columnValue.toString());
         for (DynamicEntity entity : tableClient.execute(query)) {
             try {
                 TableOperation deleteOperation = TableOperation.delete(entity);

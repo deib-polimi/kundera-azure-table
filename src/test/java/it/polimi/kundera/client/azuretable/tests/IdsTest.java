@@ -52,79 +52,6 @@ public class IdsTest extends TestBase {
     }
 
     @Test
-    public void userFullStringIdTest() {
-        print("user full string id with utils");
-        String id = AzureTableKey.asString("1", "phone");
-        PhoneString phone = new PhoneString();
-        phone.setNumber(123456789L);
-        phone.setId(id);
-        em.persist(phone);
-        Assert.assertNotNull(phone.getId());
-        // ID should be "partitionKey_rowKey" and both are user specified
-        Assert.assertEquals("1_phone", phone.getId());
-
-        clear();
-
-        print("read");
-        PhoneString foundPhone = em.find(PhoneString.class, id);
-        Assert.assertNotNull(foundPhone);
-        Assert.assertEquals(id, foundPhone.getId());
-        Assert.assertEquals((Long) 123456789L, foundPhone.getNumber());
-
-        print("update");
-        foundPhone.setNumber(987654321L);
-        em.merge(foundPhone);
-
-        clear();
-
-        TypedQuery<PhoneString> query = em.createQuery("SELECT p FROM PhoneString p WHERE p.id = :id", PhoneString.class);
-        foundPhone = query.setParameter("id", id).getSingleResult();
-        Assert.assertNotNull(foundPhone);
-        Assert.assertEquals(id, foundPhone.getId());
-        Assert.assertEquals((Long) 987654321L, foundPhone.getNumber());
-
-        print("delete");
-        em.remove(foundPhone);
-        foundPhone = em.find(PhoneString.class, id);
-        Assert.assertNull(foundPhone);
-
-        print("user full string id without utils");
-        id = "123456_phone1";
-        phone = new PhoneString();
-        phone.setNumber(123456789L);
-        phone.setId(id);
-        em.persist(phone);
-        Assert.assertNotNull(phone.getId());
-        // ID should be "partitionKey_rowKey" and both are user specified
-        Assert.assertEquals("123456_phone1", phone.getId());
-
-        clear();
-
-        print("read");
-        foundPhone = em.find(PhoneString.class, id);
-        Assert.assertNotNull(foundPhone);
-        Assert.assertEquals(id, foundPhone.getId());
-        Assert.assertEquals((Long) 123456789L, foundPhone.getNumber());
-
-        print("update");
-        foundPhone.setNumber(987654321L);
-        em.merge(foundPhone);
-
-        clear();
-
-        query = em.createQuery("SELECT p FROM PhoneString p WHERE p.id = :id", PhoneString.class);
-        foundPhone = query.setParameter("id", id).getSingleResult();
-        Assert.assertNotNull(foundPhone);
-        Assert.assertEquals(id, foundPhone.getId());
-        Assert.assertEquals((Long) 987654321L, foundPhone.getNumber());
-
-        print("delete");
-        em.remove(foundPhone);
-        foundPhone = em.find(PhoneString.class, id);
-        Assert.assertNull(foundPhone);
-    }
-
-    @Test
     public void testIdWithoutPartitionKey() {
         print("user row key with utils");
         String id = AzureTableKey.asString("phone");
@@ -133,7 +60,7 @@ public class IdsTest extends TestBase {
         phone.setId(id);
         em.persist(phone);
         Assert.assertNotNull(phone.getId());
-        // ID should be "rowKey", partition key is implicitly the default one
+        // ID should be "rowKey", partition key is implicitly the table name
         Assert.assertEquals("phone", phone.getId());
 
         clear();
@@ -163,7 +90,7 @@ public class IdsTest extends TestBase {
         phone.setId(id);
         em.persist(phone);
         Assert.assertNotNull(phone.getId());
-        // ID should be "rowKey", partition key is implicitly the default one
+        // ID should be "rowKey", partition key is implicitly the table name
         Assert.assertEquals("phone1", phone.getId());
 
         clear();
