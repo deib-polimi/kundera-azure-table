@@ -536,11 +536,11 @@ public class AzureTableClient extends ClientBase implements Client<AzureTableQue
     public void delete(Object entity, Object pKey) {
         logger.debug("entity = [" + entity + "], pKey = [" + pKey + "]");
 
-        // pass through AzureTableKey just for validation
         AzureTableKey key = new AzureTableKey(pKey.toString());
         EntityMetadata entityMetadata = KunderaMetadataManager.getEntityMetadata(kunderaMetadata, entity.getClass());
         try {
-            DynamicEntity tableEntity = get(entityMetadata.getTableName(), key);
+            DynamicEntity tableEntity = new DynamicEntity(key.getPartitionKey(), key.getRowKey());
+            tableEntity.setEtag("*");
             TableOperation deleteOperation = TableOperation.delete(tableEntity);
             tableClient.execute(entityMetadata.getTableName(), deleteOperation);
         } catch (StorageException e) {

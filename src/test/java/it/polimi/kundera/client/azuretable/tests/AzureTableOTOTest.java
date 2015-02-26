@@ -114,5 +114,9 @@ public class AzureTableOTOTest extends TestBase {
         Assert.assertEquals((Long) 123L, foundEmployee.getSalary());
         Assert.assertEquals(phnId, foundEmployee.getPhone().getId());
         Assert.assertEquals((Long) 123456789L, foundEmployee.getPhone().getNumber());
+
+        print("cleanup");
+        em.remove(phone);
+        em.remove(employee);
     }
 }

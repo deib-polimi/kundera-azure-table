@@ -96,6 +96,11 @@ public class AzureTableQueryTest extends TestBase {
         Assert.assertEquals(phnId, foundPhone.getId());
         Assert.assertEquals((Long) 123L, foundPhone.getNumber());
         Assert.assertEquals(PhoneType.HOME, foundPhone.getType());
+
+        print("cleanup");
+        em.remove(employee1);
+        em.remove(employee2);
+        em.remove(phone);
     }
 
     @Test
@@ -174,6 +179,10 @@ public class AzureTableQueryTest extends TestBase {
             }
         }
         Assert.assertEquals(0, toCheck);
+
+        print("cleanup");
+        em.remove(employee1);
+        em.remove(employee2);
     }
 
     @Test
@@ -247,6 +256,12 @@ public class AzureTableQueryTest extends TestBase {
         query.setParameter("name", "Fabio");
         thrown.expect(KunderaException.class);
         query.getResultList();
+
+        print("cleanup");
+        em.remove(employee1);
+        em.remove(employee2);
+        em.remove(employee3);
+        em.remove(employee4);
     }
 
     @Test

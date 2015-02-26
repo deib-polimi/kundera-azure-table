@@ -175,5 +175,10 @@ public class AzureTableOTMTest extends TestBase {
                 Assert.assertEquals("Computer Science", emp.getDepartment().getName());
             }
         }
+
+        print("cleanup");
+        em.remove(department);
+        em.remove(employee1);
+        em.remove(employee2);
     }
 }

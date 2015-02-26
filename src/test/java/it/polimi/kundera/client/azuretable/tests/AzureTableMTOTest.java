@@ -161,5 +161,10 @@ public class AzureTableMTOTest extends TestBase {
         Assert.assertEquals((Long) 123L, foundEmployee.getSalary());
         Assert.assertEquals(depId, foundEmployee.getDepartment().getId());
         Assert.assertEquals("Computer Science", foundEmployee.getDepartment().getName());
+
+        print("cleanup");
+        em.remove(department);
+        em.remove(employee1);
+        em.remove(employee2);
     }
 }

@@ -370,5 +370,12 @@ public class AzureTableMTMTest extends TestBase {
          * NOTE: cannot directly query over join table
          * EMPLOYEE_PROJECT since is not a class in JPA model
          */
+
+        print("cleanup");
+        em.remove(project1);
+        em.remove(project2);
+        em.remove(project3);
+        em.remove(employee1);
+        em.remove(employee2);
     }
 }

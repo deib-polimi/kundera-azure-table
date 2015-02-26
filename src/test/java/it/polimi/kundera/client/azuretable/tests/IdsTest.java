@@ -201,6 +201,9 @@ public class IdsTest extends TestBase {
         phone.setId(1D);
         thrown.expect(KunderaException.class);
         em.persist(phone);
+
+        print("cleanup");
+        em.remove(phone);
     }
 
     @Test
@@ -212,5 +215,8 @@ public class IdsTest extends TestBase {
         phone.setId(1D);
         thrown.expect(KunderaException.class);
         em.persist(phone);
+
+        print("cleanup");
+        em.remove(phone);
     }
 }
