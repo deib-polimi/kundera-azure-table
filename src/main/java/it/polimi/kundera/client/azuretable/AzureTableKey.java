@@ -67,7 +67,7 @@ public class AzureTableKey {
     /**
      * Helper method to generate a String key given row key.
      * The partition key is set to the default one.
-     * <p/>
+     * <p>
      * Default partition key can be set through Azure Table specific properties
      * using the property name 'table.partition.default' in the xml file.
      *
@@ -105,13 +105,13 @@ public class AzureTableKey {
 
     /**
      * Returns the string representation of the key.
-     * <p/>
+     * <p>
      * If {@code fill} is {@code true} the full string representation is returned that is the row key and
      * the partition key, even if the partition key is the default one
      * (should be used when persisting into relationships).
      * If {@code fill} is {@code false} tha simple representation is returned that is the row key and
      * the partition key iff is not the default one, the default partition key is left implicit.
-     * <p/>
+     * <p>
      * Note that calling toString(false) is perfectly equals to calling simply toString().
      *
      * @param full true if want the full representation of the key
